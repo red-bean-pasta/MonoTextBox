@@ -1,4 +1,4 @@
-namespace MonoTextBox.Positioning.Enumerating;
+namespace MonoTextBox.Utils;
 
 public ref struct Slice
 {

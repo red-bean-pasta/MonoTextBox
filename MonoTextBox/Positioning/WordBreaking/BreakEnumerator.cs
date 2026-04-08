@@ -1,4 +1,4 @@
-using MonoTextBox.Positioning.Enumerating;
+using MonoTextBox.Utils;
 
 namespace MonoTextBox.Positioning.WordBreaking;
 

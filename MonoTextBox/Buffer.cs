@@ -1,10 +1,11 @@
 using System.Diagnostics;
 using MonoTextBox.Formatting;
-using MonoTextBox.Positioning.Enumerating;
+using MonoTextBox.Positioning.SpanEnumerating;
+using MonoTextBox.Utils;
 
-namespace MonoTextBox.Positioning;
+namespace MonoTextBox;
 
-public ref struct Buffer
+public readonly ref struct Buffer
 {
     public ReadOnlySpan<char> Text { get; }
     public ReadOnlySpan<Format> Format { get; }
@@ -28,8 +29,6 @@ public ref struct Buffer
     
     public BufferEnumerator GetEnumerator() => new(this);
     
-    
-    public (char Char, Format Format) this[int index] => (Text[index], Format[index]);
 
     public (char Char, Format Format) this[Index index] => (Text[index], Format[index]);
     

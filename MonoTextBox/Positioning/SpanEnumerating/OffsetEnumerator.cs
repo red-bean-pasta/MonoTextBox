@@ -1,4 +1,6 @@
-namespace MonoTextBox.Positioning.Enumerating;
+using MonoTextBox.Utils;
+
+namespace MonoTextBox.Positioning.SpanEnumerating;
 
 
 public ref struct OffsetResult

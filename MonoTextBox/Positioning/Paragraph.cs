@@ -2,7 +2,7 @@ using System.Diagnostics;
 using Icu;
 using MonoTextBox.Formatting;
 using MonoTextBox.Formatting.Font;
-using MonoTextBox.Positioning.Enumerating;
+using MonoTextBox.Positioning.SpanEnumerating;
 using MonoTextBox.Positioning.WordBreaking;
 
 namespace MonoTextBox.Positioning;
