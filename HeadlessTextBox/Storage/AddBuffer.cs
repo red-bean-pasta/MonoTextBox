@@ -1,6 +1,6 @@
-using MonoTextBox.Utils;
+using HeadlessTextBox.Utils;
 
-namespace MonoTextBox.Storage;
+namespace HeadlessTextBox.Storage;
 
 public class AddBuffer
 {

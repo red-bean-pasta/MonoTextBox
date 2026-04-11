@@ -1,6 +1,6 @@
-using MonoTextBox.Legacy.Editing.Inputs.Interfaces;
+using HeadlessTextBox.Legacy.Editing.Inputs.Interfaces;
 
-namespace MonoTextBox.Legacy.Editing;
+namespace HeadlessTextBox.Legacy.Editing;
 
 public class UndoRedoManager
 {

@@ -1,6 +1,6 @@
-using MonoTextBox.Utils.AvlTree;
+using HeadlessTextBox.Utils.WeightedTree;
 
-namespace MonoTextBox.Formatting;
+namespace HeadlessTextBox.Formatting;
 
 public class FormatTree: Node<FormatBranch>
 {

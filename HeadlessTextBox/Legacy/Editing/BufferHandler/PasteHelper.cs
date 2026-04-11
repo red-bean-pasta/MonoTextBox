@@ -1,7 +1,7 @@
 using System.Diagnostics;
-using MonoTextBox.Legacy.Editing.Inputs;
+using HeadlessTextBox.Legacy.Editing.Inputs;
 
-namespace MonoTextBox.Legacy.Editing.BufferHandler;
+namespace HeadlessTextBox.Legacy.Editing.BufferHandler;
 
 public static class PasteHelper
 {

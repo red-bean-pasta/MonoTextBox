@@ -1,8 +1,8 @@
-using MonoTextBox.Legacy.Editing.Inputs.Bases;
-using MonoTextBox.Legacy.Editing.Inputs.Interfaces;
-using MonoTextBox.Utils;
+using HeadlessTextBox.Legacy.Editing.Inputs.Bases;
+using HeadlessTextBox.Legacy.Editing.Inputs.Interfaces;
+using HeadlessTextBox.Utils;
 
-namespace MonoTextBox.Legacy.Editing.Inputs;
+namespace HeadlessTextBox.Legacy.Editing.Inputs;
 
 public class DeleteInput: UndoRedoInput, IAddableInput
 {

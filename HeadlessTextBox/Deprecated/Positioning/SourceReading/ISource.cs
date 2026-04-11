@@ -1,7 +1,7 @@
-using MonoTextBox.Compositing.Contract;
-using MonoTextBox.Utils;
+using HeadlessTextBox.Compositing.Contract;
+using HeadlessTextBox.Utils;
 
-namespace MonoTextBox.Deprecated.Positioning.SourceReading;
+namespace HeadlessTextBox.Deprecated.Positioning.SourceReading;
 
 // DEPRECATED: interface disallow ref struct and may box struct uncarefully
 public interface ISource

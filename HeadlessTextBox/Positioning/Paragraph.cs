@@ -1,11 +1,13 @@
 using System.Diagnostics;
+using HeadlessTextBox.Compositing.Contracts;
+using HeadlessTextBox.Formatting;
+using HeadlessTextBox.Formatting.Font;
+using HeadlessTextBox.Positioning.Models;
+using HeadlessTextBox.Positioning.WordBreaking;
 using Icu;
-using MonoTextBox.Compositing.Contract;
-using MonoTextBox.Formatting;
-using MonoTextBox.Formatting.Font;
-using MonoTextBox.Positioning.WordBreaking;
+using Range = HeadlessTextBox.Positioning.Models.Range;
 
-namespace MonoTextBox.Positioning;
+namespace HeadlessTextBox.Positioning;
 
 public class Paragraph
 {
@@ -94,11 +96,13 @@ public class Paragraph
         var line = _lines.Last();
         foreach (var (c, f) in source)
         {
-            var range = CalculateCharRange(c, f);
+            var slot = CalculateCharSlot(c, f);
+            
             var room = lineWidth - line.RightEdge;
-            var width = Math.Min(range.Width, room);
-            var clamped = new Range(range.StartPos, range.StartPos + width);
-            line.Append(clamped);
+            var width = Math.Min(slot.Range.Width, room);
+            var clamped = new Range(slot.Range.StartPos, slot.Range.StartPos + width);
+            
+            line.Append(slot with {Range = clamped});
         }
     }
     
@@ -109,9 +113,9 @@ public class Paragraph
         while (i < source.Length)
         {
             var (c, f) = source[i];
-            var addend = CalculateCharRange(c, f);
+            var addend = CalculateCharSlot(c, f);
             
-            if (Line.LineRange(addend, line).EndPos <= lineWidth)
+            if (Line.LineSlot(addend, line).Range.EndPos <= lineWidth)
             {
                  line.Append(addend);
                  i++;
@@ -130,7 +134,7 @@ public class Paragraph
     {
         var line = _lines.Last();
         foreach (var (c, f) in source) 
-            line.Append(CalculateCharRange(c, f));
+            line.Append(CalculateCharSlot(c, f));
     }
 
 
@@ -162,19 +166,24 @@ public class Paragraph
     {
         var range = new Range();
         foreach (var (c, f) in source)
-            range += CalculateCharRange(c, f);
+            range += CalculateCharSlot(c, f).Range;
         return range;
     }
     
-    private static Range CalculateCharRange(char c, IFormat format)
+    private static Slot CalculateCharSlot(char c, IFormat format)
     {
         Debug.Assert(!char.IsControl(c));
 
         var font = FontManager.GetFont(format.Font);
-        var glyph = font.GetGlyphMetrics(c);
-        var start = glyph.LeftSideBearing;
-        var end = glyph.LeftSideBearing + glyph.Width + glyph.RightSideBearing;
-        return new Range(start, end);
+        var metrics = font.GetGlyphMetrics(c);
+        
+        var start = metrics.LeftSideBearing;
+        var end = metrics.LeftSideBearing + metrics.Width + metrics.RightSideBearing;
+        var range = new Range(start, end);
+        
+        var height = metrics.Ascender + Math.Abs(metrics.Descender) + metrics.LineGap;
+        
+        return new Slot(range, height);
     }
 
 

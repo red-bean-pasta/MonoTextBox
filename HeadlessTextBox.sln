@@ -1,6 +1,6 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MonoTextBox", "MonoTextBox\MonoTextBox.csproj", "{D99D8A2E-8AE7-43BB-A1B1-F84B91C9B137}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HeadlessTextBox", "HeadlessTextBox\HeadlessTextBox.csproj", "{D99D8A2E-8AE7-43BB-A1B1-F84B91C9B137}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

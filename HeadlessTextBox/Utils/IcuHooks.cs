@@ -2,7 +2,7 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.InteropServices;
 
-namespace MonoTextBox.Utils;
+namespace HeadlessTextBox.Utils;
 
 public static class IcuHooks
 {

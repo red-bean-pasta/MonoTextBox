@@ -1,6 +1,7 @@
+using System.Buffers;
 using System.Diagnostics;
 
-namespace MonoTextBox.Utils.AvlTree;
+namespace HeadlessTextBox.Utils.WeightedTree;
 
 public class Node<T> where T : IBranch<T>
 {
@@ -11,6 +12,9 @@ public class Node<T> where T : IBranch<T>
 
     protected int SubTreeLength;
     protected int SubTreeHeight;
+    
+    
+    public NodeEnumerator GetEnumerator() => new(this);
 
 
     protected int LeftLength => LeftSubNode?.SubTreeLength ?? 0;
@@ -276,4 +280,88 @@ public class Node<T> where T : IBranch<T>
         Debug.Assert(0 < index && index < value.Length);
         return value.Split(index);
     }
+    
+    
+    public ref struct NodeEnumerator
+    {
+        private readonly Node<T>[] _paths;
+        private int _depth;
+
+        private bool _enumerateStarted = false;
+
+            
+        private Node<T> CurrentNode => _paths[_depth - 1];
+        public T Current => CurrentNode.Value;
+    
+    
+        public NodeEnumerator(Node<T> root)
+        {
+            var maxDepth = root.SubTreeHeight;
+            _paths = ArrayPool<Node<T>>.Shared.Rent(maxDepth);
+            _depth = 0;
+            
+            MoveToLeftest(root);
+            
+            AddPath(null!); // For initial MoveNext
+        }
+    
+
+        public bool MoveNext()
+        {
+            if (!_enumerateStarted)
+            {
+                _enumerateStarted = true;
+                return true;
+            }
+            
+            if (_depth == 0) 
+                return false;
+            
+            PopPath();
+            var right = CurrentNode.RightSubNode;
+            if (right is not null)
+            {
+                AddPath(right);
+                MoveToLeftest(right);
+            }
+            return _depth > 0;
+        }
+
+
+        private void MoveToLeftest(Node<T> root)
+        {
+            AddPath(root);
+            
+            var current = root;
+            while (true)
+            {
+                var left = current.LeftSubNode;
+                if (left is null) 
+                    return;
+
+                Debug.Assert(left.SubTreeLength > 0);
+                AddPath(left);
+                current = left;
+            }
+        }
+        
+        private void AddPath(Node<T> node)
+        {
+            _depth++;
+            _paths[_depth - 1] = node;
+        }
+
+        private void PopPath()
+        {
+            _depth--;
+        }
+    
+    
+        public void Dispose()
+        {
+            if (_paths != null) 
+                ArrayPool<Node<T>>.Shared.Return(_paths, clearArray: true);
+        }
+    }
 }
+

@@ -1,7 +1,7 @@
 using System.Runtime.InteropServices;
 using Icu;
 
-namespace MonoTextBox.Positioning.WordBreaking;
+namespace HeadlessTextBox.Positioning.WordBreaking;
 
 public static unsafe class UrbkModels
 {

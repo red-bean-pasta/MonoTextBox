@@ -1,6 +1,6 @@
-using MonoTextBox.Formatting;
+using HeadlessTextBox.Formatting;
 
-namespace MonoTextBox.Compositing.Contract;
+namespace HeadlessTextBox.Compositing.Contracts;
 
 public record struct TextElement(
     char Char, 

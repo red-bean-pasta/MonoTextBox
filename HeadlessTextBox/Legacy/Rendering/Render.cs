@@ -1,11 +1,11 @@
+using HeadlessTextBox.Legacy.Editing;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
-using MonoTextBox.Legacy.Editing;
 using Color = Microsoft.Xna.Framework.Color;
 using Rectangle = Microsoft.Xna.Framework.Rectangle;
 
 
-namespace MonoTextBox.Legacy.Rendering;
+namespace HeadlessTextBox.Legacy.Rendering;
 
 
 public static class Render

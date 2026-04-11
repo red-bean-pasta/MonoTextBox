@@ -2,4 +2,6 @@
 bin/
 obj/
 
+*.DotSettings.user
+
 /Directory.Build.props

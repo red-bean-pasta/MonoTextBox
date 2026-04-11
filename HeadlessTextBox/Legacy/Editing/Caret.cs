@@ -1,4 +1,4 @@
-namespace MonoTextBox.Legacy.Editing;
+namespace HeadlessTextBox.Legacy.Editing;
 
 public struct Caret
 {

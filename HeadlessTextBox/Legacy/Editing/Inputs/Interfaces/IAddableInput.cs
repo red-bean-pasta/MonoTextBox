@@ -1,4 +1,4 @@
-namespace MonoTextBox.Legacy.Editing.Inputs.Interfaces;
+namespace HeadlessTextBox.Legacy.Editing.Inputs.Interfaces;
 
 public interface IAddableInput: IUndoRedoInput
 {

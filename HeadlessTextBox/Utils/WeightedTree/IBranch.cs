@@ -1,4 +1,4 @@
-namespace MonoTextBox.Utils.AvlTree;
+namespace HeadlessTextBox.Utils.WeightedTree;
 
 public interface IBranch<TSelf> where TSelf : IBranch<TSelf>
 {

@@ -1,4 +1,4 @@
-namespace MonoTextBox.Utils;
+namespace HeadlessTextBox.Utils;
 
 public static class ListExtension
 {

@@ -1,10 +1,10 @@
+using HeadlessTextBox.Legacy.Editing;
+using HeadlessTextBox.Legacy.Rendering;
 using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
 using Microsoft.Xna.Framework.Input;
-using MonoTextBox.Legacy.Editing;
-using MonoTextBox.Legacy.Rendering;
 
-namespace MonoTextBox.Legacy;
+namespace HeadlessTextBox.Legacy;
 
 
 public class TextBox

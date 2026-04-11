@@ -1,4 +1,4 @@
-namespace MonoTextBox.Formatting;
+namespace HeadlessTextBox.Formatting;
 
 public interface IFormat: IEquatable<IFormat>
 {

@@ -1,4 +1,4 @@
-namespace MonoTextBox.Legacy.Rendering;
+namespace HeadlessTextBox.Legacy.Rendering;
 
 public class ScrollBuffer
 {

@@ -1,10 +1,10 @@
+using HeadlessTextBox.Compositing.Contracts;
+using HeadlessTextBox.Compositing.Serialization;
+using HeadlessTextBox.Formatting;
+using HeadlessTextBox.Positioning;
 using Icu;
-using MonoTextBox.Compositing.Contract;
-using MonoTextBox.Compositing.Serialization;
-using MonoTextBox.Formatting;
-using MonoTextBox.Positioning;
 
-namespace MonoTextBox.Storage;
+namespace HeadlessTextBox;
 
 public class TextBox
 {
@@ -36,7 +36,7 @@ public class TextBox
         Locale? locale = null
     ) where T: IFormat
     {
-        var formatTree = FormatSerializer<T>.Deserialize(format);
+        var formatTree = FormatDeserializer<T>.Deserialize(format);
         return new TextBox(text, formatTree, width, locale);
     }
 }

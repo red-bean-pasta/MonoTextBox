@@ -1,4 +1,4 @@
-namespace MonoTextBox.Positioning;
+namespace HeadlessTextBox.Positioning.Models;
 
 // To distinguish with Slice:
 //  Range represents position;

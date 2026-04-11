@@ -1,6 +1,6 @@
-using MonoTextBox.Utils;
+using HeadlessTextBox.Utils;
 
-namespace MonoTextBox.Positioning.WordBreaking;
+namespace HeadlessTextBox.Positioning.WordBreaking;
 
 public ref struct BreakEnumerator
 {

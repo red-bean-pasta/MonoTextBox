@@ -1,7 +1,7 @@
-using MonoTextBox.Utils;
-using MonoTextBox.Utils.AvlTree;
+using HeadlessTextBox.Utils;
+using HeadlessTextBox.Utils.WeightedTree;
 
-namespace MonoTextBox.Storage;
+namespace HeadlessTextBox.Storage;
 
 public readonly struct Piece: IBranch<Piece>
 {

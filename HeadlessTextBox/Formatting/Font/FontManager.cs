@@ -1,8 +1,10 @@
-namespace MonoTextBox.Formatting.Font;
+namespace HeadlessTextBox.Formatting.Font;
 
 public static class FontManager
 {
-    public static Dictionary<int, IFont> Fonts { get; } = new();
+    public static Dictionary<int, IFontMeasurable> Fonts { get; } = new();
     
-    public static IFont GetFont(int id) => Fonts[id];
+    public static IFontMeasurable GetFont(int id) => Fonts[id];
+    
+    public static void RegisterFont(int id, IFontMeasurable font) => Fonts[id] = font;
 }

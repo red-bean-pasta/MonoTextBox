@@ -1,7 +1,7 @@
-using MonoTextBox.Legacy.Editing.Inputs.Interfaces;
-using MonoTextBox.Utils;
+using HeadlessTextBox.Legacy.Editing.Inputs.Interfaces;
+using HeadlessTextBox.Utils;
 
-namespace MonoTextBox.Legacy.Editing.Inputs.Bases;
+namespace HeadlessTextBox.Legacy.Editing.Inputs.Bases;
 
 public abstract class UndoRedoInput: IUndoRedoInput
 {

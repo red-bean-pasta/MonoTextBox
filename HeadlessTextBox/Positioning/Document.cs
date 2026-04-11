@@ -1,12 +1,11 @@
 using System.Diagnostics;
+using HeadlessTextBox.Compositing.Contracts;
+using HeadlessTextBox.Utils;
 using Icu;
-using MonoTextBox.Compositing.Contract;
-using MonoTextBox.Deprecated.Positioning.SourceReading;
-using MonoTextBox.Positioning.SpanEnumerating;
-using MonoTextBox.Utils;
-using MonoTextBox.Utils.AvlTree;
+using HeadlessTextBox.Positioning.SpanEnumerating;
+using HeadlessTextBox.Utils.WeightedTree;
 
-namespace MonoTextBox.Positioning;
+namespace HeadlessTextBox.Positioning;
 
 // Changing locale and width is effectively the same as calculating a new Document,
 // therefore not implemented

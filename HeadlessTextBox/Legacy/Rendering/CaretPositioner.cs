@@ -1,7 +1,7 @@
+using HeadlessTextBox.Legacy.Editing;
 using Microsoft.Xna.Framework;
-using MonoTextBox.Legacy.Editing;
 
-namespace MonoTextBox.Legacy.Rendering;
+namespace HeadlessTextBox.Legacy.Rendering;
 
 public static class CaretPositioner
 {

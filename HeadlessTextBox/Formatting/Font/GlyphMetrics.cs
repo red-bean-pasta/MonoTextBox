@@ -1,7 +1,10 @@
-namespace MonoTextBox.Formatting.Font;
+namespace HeadlessTextBox.Formatting.Font;
 
 public record struct GlyphMetrics(
     float LeftSideBearing,
     float Width,
-    float RightSideBearing
+    float RightSideBearing,
+    float Ascender,
+    float Descender,
+    float LineGap
 );

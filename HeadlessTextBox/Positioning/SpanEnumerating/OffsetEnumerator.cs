@@ -1,6 +1,6 @@
-using MonoTextBox.Utils;
+using HeadlessTextBox.Utils;
 
-namespace MonoTextBox.Positioning.SpanEnumerating;
+namespace HeadlessTextBox.Positioning.SpanEnumerating;
 
 
 public ref struct OffsetResult

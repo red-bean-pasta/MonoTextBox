@@ -1,9 +1,9 @@
 using System.Diagnostics;
-using MonoTextBox.Legacy.Editing.BufferHandler;
-using MonoTextBox.Legacy.Editing.Inputs;
-using MonoTextBox.Legacy.Editing.Inputs.Interfaces;
+using HeadlessTextBox.Legacy.Editing.BufferHandler;
+using HeadlessTextBox.Legacy.Editing.Inputs;
+using HeadlessTextBox.Legacy.Editing.Inputs.Interfaces;
 
-namespace MonoTextBox.Legacy.Editing;
+namespace HeadlessTextBox.Legacy.Editing;
 
 /// <summary>
 /// TextBuffer buffers <see cref="Inputs"/> and und/redo steps

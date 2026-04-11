@@ -1,6 +1,6 @@
 using Icu;
 
-namespace MonoTextBox.Positioning.WordBreaking;
+namespace HeadlessTextBox.Positioning.WordBreaking;
 
 public static class LineBreakerManager
 {

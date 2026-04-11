@@ -1,8 +1,8 @@
-using MonoTextBox.Formatting;
-using MonoTextBox.Storage;
-using MonoTextBox.Utils;
+using HeadlessTextBox.Formatting;
+using HeadlessTextBox.Storage;
+using HeadlessTextBox.Utils;
 
-namespace MonoTextBox.Compositing.Contract;
+namespace HeadlessTextBox.Compositing.Contracts;
 
 // Fat struct. Should always be passed with `in`
 public readonly ref struct SourceSlice
