@@ -6,33 +6,25 @@ namespace HeadlessTextBox.Compositing.Contracts;
 
 public class SourceBuffer
 {
-    public string Original { get; }
-    public AddBuffer Added { get; }
-    
-    public PieceTree PieceTree { get; }
+    public TextStorage Storage { get; }
     public FormatTree FormatTree { get; }
 
     
+    public int Length => Storage.PieceTree.Length;
+    
+    
     public SourceBuffer()
-    {
-        Original = string.Empty;
-        Added = new AddBuffer();
-        
-        var piece = new Piece(0, Original.Length, Piece.SourceType.Original);
-        PieceTree = new PieceTree(piece, null, null);
-
-        var format = new FormatBranch();
-        FormatTree = new FormatTree(format, null, null);
-    }
+    : this(string.Empty, new FormatTree())
+    { }
     
     public SourceBuffer(string text, FormatTree format)
     {
-        Original = text;
-        Added = new AddBuffer();
+        var originalBuffer = text;
+        var addedBuffer = new AddBuffer();
+        var piece = new Piece(0, originalBuffer.Length, Piece.SourceType.Original);
+        var pieceTree = new PieceTree(piece, null, null);
+        Storage = new TextStorage(originalBuffer, addedBuffer, pieceTree);
         
-        var piece = new Piece(0, Original.Length, Piece.SourceType.Original);
-        PieceTree = new PieceTree(piece, null, null);
-
         FormatTree = format;
     }
 
@@ -43,7 +35,7 @@ public class SourceBuffer
 
     private SourceSlice Slice(Range range)
     {
-        var (start, end) = range.GetOffsetAndLength(PieceTree.Length);
+        var (start, end) = range.GetOffsetAndLength(Length);
         return Slice(start, end);
     }
     
@@ -54,26 +46,10 @@ public class SourceBuffer
         return new SourceSlice(start, length, this);
     }
 
-    public TextElement GetValueAt(Index index)
+    private TextElement GetValueAt(Index index)
     {
-        var (piece, pRelativeIndex) = PieceTree.Find(index);
-        var content = GetContinuousPieceSpan(piece.Start + pRelativeIndex, 1, piece.Source);
-        var c = content[0];
-        
-        var (format, fRelativeIndex) = FormatTree.Find(index);
-        var f = format.Format;
-
-        return new TextElement(c, f);
-    }
-
-
-    private ReadOnlySpan<char> GetContinuousPieceSpan(
-        int start, 
-        int length, 
-        Piece.SourceType type)
-    {
-        return type == Piece.SourceType.Original
-            ? Original.AsSpan(start, length)
-            : Added.GetSpan(start, length);
+        var character = Storage.GetValueAt(index);
+        var format= FormatTree.Find(index).Value.Format;
+        return new TextElement(character, format);
     }
 }

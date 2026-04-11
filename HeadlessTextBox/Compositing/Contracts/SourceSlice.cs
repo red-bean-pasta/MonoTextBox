@@ -25,7 +25,7 @@ public readonly ref struct SourceSlice
         
         _formatTree = source.FormatTree;
         
-        var (firstPiece, relativeIndex) = source.PieceTree.Find(offset);
+        var (firstPiece, relativeIndex) = source.Storage.PieceTree.Find(offset);
         _textCache = firstPiece.Length - relativeIndex > length 
             ? SliceContinuousPiece(firstPiece.Source, firstPiece.Start + relativeIndex, length, source)
             : StitchPieceSlice(source, offset, length, new char[length]);
@@ -85,9 +85,10 @@ public readonly ref struct SourceSlice
         int length,
         SourceBuffer source)
     {
+        var storage = source.Storage;
         return sourceType == Piece.SourceType.Original
-            ? source.Original.AsSpan(sourceStart, length)
-            : source.Added.GetSpan(sourceStart, length);
+            ? storage.Original.AsSpan(sourceStart, length)
+            : storage.Added.GetSpan(sourceStart, length);
     }
 
     private static Span<char> StitchPieceSlice(
@@ -100,7 +101,7 @@ public readonly ref struct SourceSlice
         var l = length;
         while (true)
         {
-            var (piece, relativeIndex) = source.PieceTree.Find(i);
+            var (piece, relativeIndex) = source.Storage.PieceTree.Find(i);
             var pieceSpace = piece.Length - relativeIndex;
             
             var spanStart = piece.Start + relativeIndex;
@@ -123,10 +124,11 @@ public readonly ref struct SourceSlice
         int length, 
         Span<char> span)
     {
+        var storage = source.Storage;
         if (sourceType == Piece.SourceType.Add)
-            source.Added.GetSpan(sourceStart, length).CopyTo(span);
+            storage.Added.GetSpan(sourceStart, length).CopyTo(span);
         else
-            source.Original.AsSpan(sourceStart, length).CopyTo(span);
+            storage.Original.AsSpan(sourceStart, length).CopyTo(span);
     }
 }
 
