@@ -1,6 +1,6 @@
 namespace HeadlessTextBox.Legacy.Editing.Inputs.Interfaces;
 
-public interface IAddableInput: IUndoRedoInput
+public interface IAddableInput: IInput
 {
     public void Add(char deleted);
 

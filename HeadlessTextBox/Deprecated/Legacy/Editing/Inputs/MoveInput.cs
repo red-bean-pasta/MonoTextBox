@@ -2,7 +2,7 @@ using HeadlessTextBox.Legacy.Editing.Inputs.Interfaces;
 
 namespace HeadlessTextBox.Legacy.Editing.Inputs;
 
-public class MoveInput: IUndoRedoInput
+public class MoveInput: IInput
 {
     private readonly Caret _startCaret;
     
@@ -23,7 +23,7 @@ public class MoveInput: IUndoRedoInput
     }
     
 
-    public Caret Undo(List<char> source, Caret caret)
+    public Caret Undo(Caret caret, List<char> source)
     {
         var content = source.GetRange(_destIndex, _startCaret.Length);
         
@@ -33,7 +33,7 @@ public class MoveInput: IUndoRedoInput
         return _startCaret;
     }
 
-    public Caret Redo(List<char> source, Caret caret)
+    public Caret Redo(Caret caret, List<char> source)
     {
         var content = caret.Slice(source);
         

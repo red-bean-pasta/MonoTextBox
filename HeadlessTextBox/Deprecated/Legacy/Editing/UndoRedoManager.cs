@@ -6,15 +6,15 @@ public class UndoRedoManager
 {
     private readonly int _max;
     
-    private readonly LinkedList<IUndoRedoInput> _undoStack = new();
-    private readonly Stack<IUndoRedoInput> _redoStack = new();
+    private readonly LinkedList<IInput> _undoStack = new();
+    private readonly Stack<IInput> _redoStack = new();
 
     
     public UndoRedoManager(int max) 
         => this._max = max;
 
     
-    public void Add(IUndoRedoInput step)
+    public void Add(IInput step)
     {
         Push(_undoStack, step, _max);
         _redoStack.Clear();
@@ -28,7 +28,7 @@ public class UndoRedoManager
         
         var input = Pop(_undoStack);
         _redoStack.Push(input);
-        return input.Undo(source, caret);
+        return input.Undo(caret, source);
     }
     
     public Caret Redo(List<char> source, Caret caret)
@@ -38,7 +38,7 @@ public class UndoRedoManager
         
         var input = _redoStack.Pop();
         _undoStack.AddLast(input);
-        return input.Redo(source, caret);
+        return input.Redo(caret, source);
     }
 
 

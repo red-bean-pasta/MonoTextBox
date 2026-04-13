@@ -1,6 +1,6 @@
 namespace HeadlessTextBox.Formatting.Font;
 
-public record struct GlyphMetrics(
+public readonly record struct GlyphMetrics(
     float LeftSideBearing,
     float Width,
     float RightSideBearing,

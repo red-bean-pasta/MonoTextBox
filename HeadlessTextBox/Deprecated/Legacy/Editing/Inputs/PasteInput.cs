@@ -5,9 +5,9 @@ namespace HeadlessTextBox.Legacy.Editing.Inputs;
 public class PasteInput: UndoRedoInput
 {
     public PasteInput(
-        int anchorIndex,
+        int start,
         IEnumerable<char> pasted, 
         IEnumerable<char>? replaced = null)
-        : base(anchorIndex, pasted, replaced)
+        : base(start, pasted, replaced)
     { }
 }

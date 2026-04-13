@@ -1,4 +1,5 @@
 using HeadlessTextBox.Utils;
+using HeadlessTextBox.Utils.Extensions;
 
 namespace HeadlessTextBox.Storage;
 
@@ -31,7 +32,7 @@ public class AddBuffer
     }
     
     
-    public (int ChunkIndex, int Start, int Length) Append(ReadOnlySpan<char> text) {
+    public (int Start, int Length) Append(ReadOnlySpan<char> text) {
         if (_currentChunkPosition + text.Length > _chunkSize) 
             AddNewChunk();
 
@@ -41,7 +42,7 @@ public class AddBuffer
         text.CopyTo(_chunks[_currentChunkIndex].AsSpan(start));
         _currentChunkPosition += text.Length;
 
-        return (_currentChunkIndex, start, length);
+        return (start, length);
     }
     
     private void AddNewChunk() {

@@ -1,7 +1,7 @@
 using System.Buffers;
 using System.Diagnostics;
 
-namespace HeadlessTextBox.Utils.WeightedTree;
+namespace HeadlessTextBox.Storage.WeightedTree;
 
 public class Node<T> where T : IBranch<T>
 {
@@ -12,18 +12,15 @@ public class Node<T> where T : IBranch<T>
 
     protected int SubTreeLength;
     protected int SubTreeHeight;
-    
-    
-    public NodeEnumerator GetEnumerator() => new(this);
 
-
+    
     protected int LeftLength => LeftSubNode?.SubTreeLength ?? 0;
     protected int BeforeRightLength => LeftLength + Value.Length;
     protected int LeftHeight => LeftSubNode?.SubTreeHeight ?? 0;
     protected int RightHeight => RightSubNode?.SubTreeHeight ?? 0;
     
     
-    public Node(
+    protected Node(
         T value, 
         Node<T>? leftSubNode, 
         Node<T>? rightSubNode)
@@ -36,13 +33,16 @@ public class Node<T> where T : IBranch<T>
     }
     
     
-    public (T Value, int RelativeIndex) Find(Index absoluteIndex)
+    protected NodeEnumerator GetEnumerator(int start = 0, int length = -1) => new(this, start, length);
+    
+    
+    protected (T Value, int RelativeIndex) Find(Index absoluteIndex)
     {
         var normalized = absoluteIndex.GetOffset(SubTreeLength);
         return Find(normalized);
     }
     
-    public (T Value, int RelativeIndex) Find(int absoluteIndex)
+    protected (T Value, int RelativeIndex) Find(int absoluteIndex)
     {
         switch (CheckLeftRight(absoluteIndex))
         {
@@ -58,14 +58,14 @@ public class Node<T> where T : IBranch<T>
     }
 
     
-    public virtual Node<T> AppendAndBalance(T value)
+    protected virtual Node<T> AppendAndBalance(T value)
     {
         var index = BeforeRightLength + RightSubNode?.SubTreeLength ?? 0;
         return InsertAndBalance(index, value);
     }
     
     /// <returns>If depth added</returns>
-    public virtual Node<T> InsertAndBalance(int index, T value)
+    protected virtual Node<T> InsertAndBalance(int index, T value)
     {
         Insert(value, index);
         return Balance();
@@ -112,16 +112,78 @@ public class Node<T> where T : IBranch<T>
     }
 
 
-    public virtual Node<T>? RemoveAndBalance(int index)
+    protected virtual Node<T> ReplaceAndBalance(T value, int index)
     {
         if (index < LeftLength)
         {
             Debug.Assert(LeftSubNode is not null);
-            LeftSubNode = LeftSubNode.RemoveAndBalance(index);
+            LeftSubNode = LeftSubNode.ReplaceAndBalance(value, index);
         }
         else if (index >= BeforeRightLength)
         {
-            RightSubNode = RightSubNode?.RemoveAndBalance(index - BeforeRightLength);
+            Debug.Assert(RightSubNode is not null);
+            RightSubNode = RightSubNode.ReplaceAndBalance(value, index - BeforeRightLength);
+        }
+        else
+        {
+            Value = value;
+        }
+        
+        Recalculate();
+        return Balance();
+    }
+    
+    
+    protected virtual Node<T>? RemoveAndBalance(int start, int length)
+    {
+        var result = this;
+        
+        var leftStart = start;
+        var leftLength = Math.Max(0, LeftLength - start);
+        if (leftLength > 0)
+        {
+            Debug.Assert(result.LeftSubNode is not null);
+            result.LeftSubNode = result.LeftSubNode.RemoveAndBalance(leftStart, leftLength);
+        }
+
+        var currentStart = Math.Max(start, LeftLength);
+        var currentLength = start >= BeforeRightLength ? 0 : Math.Min(length, BeforeRightLength - start);
+        if (currentLength == Value.Length)
+        {
+            Debug.Assert(Value.Length > 0);
+            result = result.PopAndBalance(currentStart);
+        }
+        else if (currentLength > 0)
+        {
+            var value = result.Value;
+            result = result.PopAndBalance(currentStart);
+            var (l, m, r) = TrisectT(value, currentStart - LeftLength, currentStart - LeftLength + currentLength);
+            result = result?.InsertAndBalance(currentStart, r) ?? BuildChildNode(m, BuildChildNode(l), BuildChildNode(r));
+        }
+
+        var rightStart = start - BeforeRightLength;
+        var rightLength = Math.Max(start + length - BeforeRightLength, 0);
+        if (rightLength > 0)
+        {
+            Debug.Assert(result?.RightSubNode != null);
+            result.RightSubNode = result.RightSubNode.RemoveAndBalance(rightStart, rightLength);
+        }
+        
+        Recalculate();
+        return result?.Balance();
+    }
+
+
+    protected virtual Node<T>? PopAndBalance(int index)
+    {
+        if (index < LeftLength)
+        {
+            Debug.Assert(LeftSubNode is not null);
+            LeftSubNode = LeftSubNode.PopAndBalance(index);
+        }
+        else if (index >= BeforeRightLength)
+        {
+            RightSubNode = RightSubNode?.PopAndBalance(index - BeforeRightLength);
         }
         else if (LeftSubNode is not null)
         {
@@ -264,7 +326,7 @@ public class Node<T> where T : IBranch<T>
     // left subtree: [0, leftLength)
     // current value: [leftLength, leftLength + T.Length)
     // right subtree: [starts at leftLength + T.Length, ...)
-    private int CheckLeftRight(int index)
+    protected int CheckLeftRight(int index)
     {
         if (index < LeftLength)
             return -1;
@@ -275,15 +337,30 @@ public class Node<T> where T : IBranch<T>
         return 1;
     }
 
-    private static (T Left, T Right) SplitT(T value, int index)
+    protected static (T Left, T Right) SplitT(T value, int index)
     {
         Debug.Assert(0 < index && index < value.Length);
         return value.Split(index);
     }
     
+    protected (T Left, T Middle, T Right) TrisectT(T value, int start, int end)
+    {
+        var (l, r) = value.Split(start);
+        var (middle, right) = r.Split(end - start);
+        return (l, middle, right);
+    }
+
+
+    protected static Node<T> BuildChildNode(T value, Node<T>? leftSubNode = null, Node<T>? rightSubNode = null)
+    {
+        return new Node<T>(value, leftSubNode, rightSubNode);
+    }
+    
     
     public ref struct NodeEnumerator
     {
+        private int _remainingLength;
+        
         private readonly Node<T>[] _paths;
         private int _depth;
 
@@ -291,19 +368,24 @@ public class Node<T> where T : IBranch<T>
 
             
         private Node<T> CurrentNode => _paths[_depth - 1];
-        public T Current => CurrentNode.Value;
+        public T Current => GetCurrentValue();
     
     
-        public NodeEnumerator(Node<T> root)
+        public NodeEnumerator(Node<T> root, int start = 0, int length = -1)
         {
+            _remainingLength = length < 0 ? root.SubTreeLength - start : length;
+            
             var maxDepth = root.SubTreeHeight;
             _paths = ArrayPool<Node<T>>.Shared.Rent(maxDepth);
             _depth = 0;
             
-            MoveToLeftest(root);
+            MoveTo(root, start);
             
             AddPath(null!); // For initial MoveNext
         }
+        
+        
+        public NodeEnumerator GetEnumerator() => this;
     
 
         public bool MoveNext()
@@ -316,35 +398,59 @@ public class Node<T> where T : IBranch<T>
             
             if (_depth == 0) 
                 return false;
-            
+
+            _remainingLength -= CurrentNode.Value.Length;
+            if (_remainingLength <= 0)
+                return false;
+
             PopPath();
             var right = CurrentNode.RightSubNode;
-            if (right is not null)
-            {
-                AddPath(right);
+            if (right is not null) 
                 MoveToLeftest(right);
-            }
             return _depth > 0;
         }
 
 
-        private void MoveToLeftest(Node<T> root)
+        private void MoveTo(Node<T> root, int start)
         {
-            AddPath(root);
-            
-            var current = root;
             while (true)
             {
-                var left = current.LeftSubNode;
-                if (left is null) 
-                    return;
+                if (start < root.LeftLength)
+                {
+                    AddPath(root);
+                    
+                    var leftNode = root.LeftSubNode;
+                    var leftStart = start;
+                    Debug.Assert(leftNode is not null && leftNode.SubTreeLength > 0);
+                    root = leftNode;
+                    start = leftStart;
+                    
+                    continue;
+                }
 
-                Debug.Assert(left.SubTreeLength > 0);
-                AddPath(left);
-                current = left;
+                if (start == root.BeforeRightLength)
+                {
+                    AddPath(root);
+                    return;
+                }
+                if (start < root.BeforeRightLength)
+                {
+                    var (leftValue, rightValue) = root.Value.Split(start - root.BeforeRightLength);
+                    var node = new Node<T>(rightValue, null, null);
+                    AddPath(node);
+                    return;
+                }
+                
+                var rightNode = root.RightSubNode;
+                var rightStart = start - root.BeforeRightLength;
+                Debug.Assert(rightNode is not null && rightNode.SubTreeLength > 0);
+                root = rightNode;
+                start = rightStart;
             }
         }
-        
+
+        private void MoveToLeftest(Node<T> root) => MoveTo(root, 0);
+
         private void AddPath(Node<T> node)
         {
             _depth++;
@@ -354,6 +460,17 @@ public class Node<T> where T : IBranch<T>
         private void PopPath()
         {
             _depth--;
+        }
+
+
+        private T GetCurrentValue()
+        {
+            var value = CurrentNode.Value;
+            if (_remainingLength >= value.Length)
+                return value;
+            
+            var (left, right) = value.Split(_remainingLength);
+            return left;
         }
     
     

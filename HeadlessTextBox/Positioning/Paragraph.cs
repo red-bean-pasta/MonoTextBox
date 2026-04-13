@@ -11,42 +11,45 @@ namespace HeadlessTextBox.Positioning;
 
 public class Paragraph
 {
-    private readonly List<Line> _lines = new();
+    private readonly List<Line> _lines;
 
     public int CharCount { get; private set; }
     
     
     public int LineCount => _lines.Count;
     public IReadOnlyList<Line> Lines => _lines;
+    public float Height => Lines.Sum(line => line.Height);
 
 
-    private Paragraph()
-    { }
+    public Paragraph() => _lines = new();
 
-    public Paragraph(List<Line> lines) => _lines = lines;
+    protected Paragraph(List<Line> lines) => _lines = lines;
 
     public static Paragraph Empty() => new();
     
     public static Paragraph Build(
         float width,
-        in SourceSlice paragraph,
+        in FlatSourceSlice paragraph,
         Locale? locale)
     {
-        var p = new Paragraph();
+        var p = Empty();
         p.Init(width, paragraph, locale);
         return p;
     }
     
     
+    public ParagraphEnumerator GetEnumerator() => new(_lines);
+    
+    
     private void Init(
         float lineWidth,
-        in SourceSlice paragraph,
+        in FlatSourceSlice paragraph,
         Locale? locale) 
         => Update(lineWidth, paragraph, 0, locale);
 
     public unsafe void Update(
         float lineWidth,
-        in SourceSlice paragraph,
+        in FlatSourceSlice paragraph,
         int changeIndex,
         Locale? locale)
     {
@@ -67,9 +70,36 @@ public class Paragraph
                 AppendWord(lineWidth, updateBuffer.Slice(offset));
         }
     }
+
+
+    [Obsolete("Not implemented: No need for line level accuracy: Not enough efficiency")]
+    public (int index, Range range) Locate(float x, float y)
+    {
+        var charIndex = 0;
+        var lineIndex = 0;
+        
+        var heightSum = 0f;
+        foreach (var line in Lines)
+        {
+            lineIndex++;
+            heightSum += line.Height;
+            if (heightSum > y)
+                break;
+            charIndex += line.Length;
+        }
+
+        foreach (var slot in Lines[lineIndex].Positions)
+        {
+            if (x <= (slot.Range.EndPos + slot.Range.StartPos) / 2)
+                break;
+            charIndex++;
+        }
+
+        return (charIndex, Lines[lineIndex].Positions[charIndex].Range);
+    }
     
 
-    private void AppendWord(float lineWidth, in SourceSlice source)
+    private void AppendWord(float lineWidth, in FlatSourceSlice source)
     {
         if (source.GetTextSpan().IsWhiteSpace())
         {
@@ -91,7 +121,7 @@ public class Paragraph
         AppendWithinWord(source);
     }
 
-    private void AppendWhitespaces(float lineWidth, in SourceSlice source)
+    private void AppendWhitespaces(float lineWidth, in FlatSourceSlice source)
     {
         var line = _lines.Last();
         foreach (var (c, f) in source)
@@ -106,20 +136,17 @@ public class Paragraph
         }
     }
     
-    private void AppendLongWord(float lineWidth, in SourceSlice source)
+    private void AppendLongWord(float lineWidth, in FlatSourceSlice source)
     {
-        var i = 0;
         var line = new Line();
-        while (i < source.Length)
+        foreach (var (c, f) in source)
         {
-            var (c, f) = source[i];
             var addend = CalculateCharSlot(c, f);
             
             if (Line.LineSlot(addend, line).Range.EndPos <= lineWidth)
             {
-                 line.Append(addend);
-                 i++;
-                 continue;
+                line.Append(addend);
+                continue;
             }
 
             if (_lines.Count > 0 && _lines[^1].Empty)
@@ -130,7 +157,7 @@ public class Paragraph
         }
     }
 
-    private void AppendWithinWord(in SourceSlice source)
+    private void AppendWithinWord(in FlatSourceSlice source)
     {
         var line = _lines.Last();
         foreach (var (c, f) in source) 
@@ -162,7 +189,7 @@ public class Paragraph
     }
     
 
-    private static Range CalculateWordRange(in SourceSlice source)
+    private static Range CalculateWordRange(in FlatSourceSlice source)
     {
         var range = new Range();
         foreach (var (c, f) in source)
@@ -203,5 +230,49 @@ public class Paragraph
             return sum - _lines[i].Length - _lines[i-1].Length;
         }
         throw new IndexOutOfRangeException();
+    }
+}
+
+
+public ref struct ParagraphEnumerator
+{
+    private int _lineIndex;
+    private int _charIndex;
+    private readonly IReadOnlyList<Line> _lines;
+
+    private float _heightOffset;
+    
+    
+    private Range CurrentRange => _lines[_lineIndex].Positions[_charIndex].Range;
+    public (float HeightOffset, Range range) Current => (_heightOffset, CurrentRange);
+    
+
+    public ParagraphEnumerator(IReadOnlyList<Line> lines)
+    {
+        _lines = lines;
+        
+        _lineIndex = 0;
+        _charIndex = -1;
+
+        _heightOffset = _lines.Count > 0
+            ? _lines[_lineIndex].Height
+            : 0f;
+    }
+
+    public bool MoveNext()
+    {
+        if (_lines[_lineIndex].Length - 1 > _charIndex)
+        {
+            _charIndex++;
+            return true;
+        }
+        
+        _lineIndex++;
+        if (_lines.Count <= _lineIndex)
+            return false;
+
+        _charIndex = 0;
+        _heightOffset += _lines[_lineIndex].Height;
+        return true;
     }
 }

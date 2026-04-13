@@ -1,21 +1,22 @@
 using HeadlessTextBox.Legacy.Editing.Inputs.Bases;
 using HeadlessTextBox.Legacy.Editing.Inputs.Interfaces;
 using HeadlessTextBox.Utils;
+using HeadlessTextBox.Utils.Extensions;
 
 namespace HeadlessTextBox.Legacy.Editing.Inputs;
 
 public class DeleteInput: UndoRedoInput, IAddableInput
 {
     public DeleteInput(
-        int anchorIndex,
+        int start,
         char deleted)
-    : this(anchorIndex, deleted.Enumerate())
+    : this(start, deleted.Enumerate())
     { }
 
     public DeleteInput(
-        int anchorIndex,
+        int start,
         IEnumerable<char>? replaced = null)
-    : base(anchorIndex, null, replaced)
+    : base(start, null, replaced)
     { }
 
     

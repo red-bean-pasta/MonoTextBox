@@ -1,3 +1,4 @@
+using HeadlessTextBox;
 using HeadlessTextBox.Legacy.Editing;
 using HeadlessTextBox.Legacy.Rendering;
 using Microsoft.Xna.Framework;
@@ -229,7 +230,7 @@ public class TextBox
     
     /// <summary>
     /// Move the whole TextBox.
-    /// For scrolling only the text content, see <see cref="TextBox.receiveScrollWheelAction"/>.
+    /// For scrolling only the text content, see <see cref="TextManager.receiveScrollWheelAction"/>.
     /// </summary>
     /// <param name="offsetX"></param>
     /// <param name="offsetY"></param>

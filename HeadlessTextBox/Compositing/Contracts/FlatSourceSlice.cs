@@ -1,11 +1,16 @@
 using HeadlessTextBox.Formatting;
-using HeadlessTextBox.Storage;
+using HeadlessTextBox.TextStoring;
 using HeadlessTextBox.Utils;
 
 namespace HeadlessTextBox.Compositing.Contracts;
 
-// Fat struct. Should always be passed with `in`
-public readonly ref struct SourceSlice
+/// <summary>
+/// Flattened stored text sliced from whole buffer. 
+/// Useful for tasks that expect continuous address, such as word wrapping and new line breaking.
+/// <br/>
+/// This is a fat struct. Remember to pass with `in`.
+/// </summary>
+public readonly ref struct FlatSourceSlice
 {
     private int Offset { get; }
     public int Length { get; }
@@ -15,7 +20,7 @@ public readonly ref struct SourceSlice
     private readonly ReadOnlySpan<char> _textCache;
     
     
-    public SourceSlice(
+    public FlatSourceSlice(
         int offset, 
         int length, 
         SourceBuffer source)
@@ -23,15 +28,15 @@ public readonly ref struct SourceSlice
         Offset = offset;
         Length = length;
         
-        _formatTree = source.FormatTree;
+        _formatTree = source.Format;
         
-        var (firstPiece, relativeIndex) = source.Storage.PieceTree.Find(offset);
+        var (firstPiece, relativeIndex) = source.Text.TextTree.Locate(offset);
         _textCache = firstPiece.Length - relativeIndex > length 
             ? SliceContinuousPiece(firstPiece.Source, firstPiece.Start + relativeIndex, length, source)
             : StitchPieceSlice(source, offset, length, new char[length]);
     }
 
-    private SourceSlice(
+    private FlatSourceSlice(
         int offset,
         int length,
         FormatTree formatTree,
@@ -44,49 +49,38 @@ public readonly ref struct SourceSlice
     }
 
 
-    // Interface
-    public SourceSliceEnumerator GetEnumerator() => new SourceSliceEnumerator(_formatTree, _textCache);
+    public SourceSliceEnumerator GetEnumerator() => new(_formatTree, _textCache);
 
     
-    public TextElement this[Index index] => throw new NotImplementedException();
+    public FlatSourceSlice this[Range range] => Slice(range);
 
-    public SourceSlice this[Range range] => throw new NotImplementedException();
+    public FlatSourceSlice Slice(Slice slice) => Slice(slice.Start, slice.Length);
 
-    public SourceSlice Slice(Slice slice) => Slice(slice.Start, slice.Length);
-
-    public SourceSlice Slice(Range range)
+    public FlatSourceSlice Slice(Range range)
     {
         var (offset, length) = range.GetOffsetAndLength(Length);
         return Slice(offset, length);
     }
 
-    public SourceSlice Slice(int offset, int length)
+    public FlatSourceSlice Slice(int offset, int length)
     {
         var newOffset = Offset + offset;
         var newTextCache = _textCache.Slice(newOffset, length);
-        return new SourceSlice(newOffset, length, _formatTree, newTextCache);
+        return new FlatSourceSlice(newOffset, length, _formatTree, newTextCache);
     }
 
     
     public ReadOnlySpan<char> GetTextSpan() => _textCache;
     
-    
-    private TextElement GetValueAt(int index)
-    {
-        var c = _textCache[index];
-        var f = _formatTree.Find(index).Value.Format;
-        return new TextElement(c, f);
-    }
-    
 
     private static ReadOnlySpan<char> SliceContinuousPiece(
-        Piece.SourceType sourceType,
+        TextPiece.SourceType sourceType,
         int sourceStart, 
         int length,
         SourceBuffer source)
     {
-        var storage = source.Storage;
-        return sourceType == Piece.SourceType.Original
+        var storage = source.Text;
+        return sourceType == TextPiece.SourceType.Original
             ? storage.Original.AsSpan(sourceStart, length)
             : storage.Added.GetSpan(sourceStart, length);
     }
@@ -97,38 +91,9 @@ public readonly ref struct SourceSlice
         int length, 
         Span<char> span)
     {
-        var i = sourceStart;
-        var l = length;
-        while (true)
-        {
-            var (piece, relativeIndex) = source.Storage.PieceTree.Find(i);
-            var pieceSpace = piece.Length - relativeIndex;
-            
-            var spanStart = piece.Start + relativeIndex;
-            var spanLength = Math.Min(l, pieceSpace);
-            CopyPieceSpan(source, piece.Source, spanStart, spanLength, span);
-            
-            i += spanLength;
-            l -= spanLength; 
-            
-            if (l <= 0) break;
-        }
-
+        foreach (var pieceSpan in source.Text.SlicedEnumerate(sourceStart, length)) 
+            pieceSpan.CopyTo(span);
         return span;
-    }
-
-    private static void CopyPieceSpan(
-        SourceBuffer source,
-        Piece.SourceType sourceType, 
-        int sourceStart, 
-        int length, 
-        Span<char> span)
-    {
-        var storage = source.Storage;
-        if (sourceType == Piece.SourceType.Add)
-            storage.Added.GetSpan(sourceStart, length).CopyTo(span);
-        else
-            storage.Original.AsSpan(sourceStart, length).CopyTo(span);
     }
 }
 
@@ -141,7 +106,7 @@ public ref struct SourceSliceEnumerator
     private readonly ReadOnlySpan<char> _textCache;
 
     private int _currentFormatRoom;
-    private FormatBranch _currentFormat;
+    private FormatPiece _currentFormat;
     
     
     public TextElement Current => GetCurrent();
@@ -186,7 +151,7 @@ public ref struct SourceSliceEnumerator
         if (_currentFormatRoom > 0)
             return;
 
-        var (format, relativeIndex) = _formatTree.Find(_index);
+        var (format, relativeIndex) = _formatTree.Locate(_index);
         _currentFormat = format;
         _currentFormatRoom = format.Length - relativeIndex;
     }

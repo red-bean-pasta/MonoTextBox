@@ -1,4 +1,4 @@
-namespace HeadlessTextBox.Utils.WeightedTree;
+namespace HeadlessTextBox.Storage.WeightedTree;
 
 public interface IBranch<TSelf> where TSelf : IBranch<TSelf>
 {

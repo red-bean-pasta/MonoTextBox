@@ -16,7 +16,7 @@ namespace HeadlessTextBox.Compositing.Serialization.FormatModels;
 //         [4, 2]
 //     ]
 // }
-public record struct V1<T>(
+public readonly record struct V1<T>(
     List<T> Styles,
     List<SpanSpec> Spans
 ) : IModel where T : IFormat
@@ -25,7 +25,7 @@ public record struct V1<T>(
 }
 
 
-public record struct SpanSpec(
+public readonly record struct SpanSpec(
     int Length, 
     int StyleIndex
 );

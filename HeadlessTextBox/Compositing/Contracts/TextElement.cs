@@ -2,7 +2,7 @@ using HeadlessTextBox.Formatting;
 
 namespace HeadlessTextBox.Compositing.Contracts;
 
-public record struct TextElement(
+public readonly record struct TextElement(
     char Char, 
     IFormat Format
 );

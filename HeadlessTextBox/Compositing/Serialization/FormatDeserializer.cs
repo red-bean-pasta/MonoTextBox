@@ -32,8 +32,8 @@ public static class FormatDeserializer<T> where T : IFormat
         foreach (var (length, styleIndex) in m.Spans)
         {
             var style = m.Styles[styleIndex];
-            var format = new FormatBranch(style, length);
-            tree.AppendAndBalance(format);
+            var format = new FormatPiece(style, length);
+            tree = tree.Append(format);
         }
 
         return tree;

@@ -1,16 +1,17 @@
 using HeadlessTextBox.Legacy.Editing.Inputs.Bases;
 using HeadlessTextBox.Legacy.Editing.Inputs.Interfaces;
 using HeadlessTextBox.Utils;
+using HeadlessTextBox.Utils.Extensions;
 
 namespace HeadlessTextBox.Legacy.Editing.Inputs;
 
 public class TypeInput: UndoRedoInput, IAddableInput
 {
     public TypeInput(
-        int anchorIndex, 
+        int start, 
         char character, 
         IEnumerable<char>? replaced = null) 
-    : base(anchorIndex, character.Enumerate(), replaced)
+    : base(start, character.Enumerate(), replaced)
     { }
 
     

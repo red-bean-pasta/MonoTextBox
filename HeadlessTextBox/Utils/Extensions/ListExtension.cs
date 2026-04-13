@@ -1,4 +1,4 @@
-namespace HeadlessTextBox.Utils;
+namespace HeadlessTextBox.Utils.Extensions;
 
 public static class ListExtension
 {

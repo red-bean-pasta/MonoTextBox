@@ -8,13 +8,13 @@
     </PropertyGroup>
     
     <ItemGroup>
-      <PackageReference Include="icu.net" Version="3.0.1" />
+      <PackageReference Include="icu.net" Version="3.0.1"/>
     </ItemGroup>
     
     <ItemGroup>
-        <Compile Remove="Deprecated\**" />
-        <EmbeddedResource Remove="Deprecated\**" />
-        <None Remove="Deprecated\**" />
+        <Compile Remove="Deprecated\**"/>
+        <EmbeddedResource Remove="Deprecated\**"/>
+        <None Include="Deprecated\**" Visible="true"/>
     </ItemGroup>
     
 </Project>

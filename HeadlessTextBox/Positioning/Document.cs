@@ -3,7 +3,7 @@ using HeadlessTextBox.Compositing.Contracts;
 using HeadlessTextBox.Utils;
 using Icu;
 using HeadlessTextBox.Positioning.SpanEnumerating;
-using HeadlessTextBox.Utils.WeightedTree;
+using HeadlessTextBox.Storage.WeightedTree;
 
 namespace HeadlessTextBox.Positioning;
 
@@ -45,6 +45,61 @@ public class Document : Node<ParagraphBranch>
 
         Debug.Assert(result is not null);
         return result;
+    }
+    
+
+    public NodeEnumerator EnumerateSliced(int start, int length) => base.GetEnumerator(start, length);
+
+
+    public IEnumerable<(int Index, float X, float Y)> GetInRangePositions(float startHeight, float spanHeight)
+    {
+        var (height, start, end) = FindInHeightIndices(startHeight, spanHeight);
+        
+        var i = start;
+        var h = height;
+        while (i < end)
+        {
+            var paragraph = Find(i).Value;
+            foreach (var line in paragraph.Lines)
+            {
+                h += line.Height;
+                foreach (var slot in line.Positions)
+                {
+                    yield return (i, slot.Range.StartPos, h);
+                    i++;
+                }
+            }
+        }
+    }
+    
+    public (float OffsetHeight, int StartIndex, int Length) FindInHeightIndices(float startHeight, float spanHeight)
+    {
+        var offsetHeight = 0f;
+        var startIndex = -1;
+        var endIndex = -1;
+
+        var weightIndex = 0;
+        var heightSum = 0f;
+        foreach (var paragraph in this.GetEnumerator())
+        {
+            heightSum += paragraph.Height;
+
+            if (startIndex == -1 && heightSum >= startHeight)
+            {
+                startIndex = weightIndex;
+                offsetHeight = heightSum - paragraph.Height - startHeight;
+            }
+
+            if (heightSum >= startHeight + spanHeight)
+            {
+                endIndex = weightIndex;
+                break;
+            }
+            
+            weightIndex += paragraph.Length;
+        }
+        
+        return (offsetHeight, startIndex, endIndex - startIndex);
     }
 
 
@@ -171,7 +226,7 @@ public class Document : Node<ParagraphBranch>
                 first = paragraph;
             else
                 last = paragraph;
-            document = (Document?)RemoveAndBalance(absoluteStart);
+            document = (Document?)PopAndBalance(absoluteStart);
         }
 
         Debug.Assert(first is not null && last is not null && document is not null);
@@ -194,37 +249,36 @@ public class Document : Node<ParagraphBranch>
     }
 
 
-
     private (Document Doc, ParagraphBranch Left, ParagraphBranch Right) FindAndSplit(int index)
     {
         var (branch, innerIndex) = Find(index);
         var branchStart = index - innerIndex;
         var branchEnd = branchStart + branch.Length;
 
-        Node<ParagraphBranch> doc;
+        Document doc;
         ParagraphBranch left;
         ParagraphBranch right;
         if (innerIndex == 0)
         {
-            left = ParagraphBranch.Empty(_width, _locale);
+            left = ParagraphBranch.Empty();
             right = branch;
-            doc = InsertAndBalance(branchStart, left);
+            doc = (Document)InsertAndBalance(branchStart, left);
         }
         else if (innerIndex == branch.Length)
         {
             left = branch;
-            right = ParagraphBranch.Empty(_width, _locale);
-            doc = InsertAndBalance(branchEnd, right);
+            right = ParagraphBranch.Empty();
+            doc = (Document)InsertAndBalance(branchEnd, right);
         }
         else
         {
             (left, right) = branch.Split(innerIndex);
-            var removed = RemoveAndBalance(branchStart);
-            var inserted = removed?.InsertAndBalance(branchStart, right) ?? new Document(right, _width, _locale);
-            doc = inserted.InsertAndBalance(branchStart, left);
+            var removed = (Document?)PopAndBalance(branchStart);
+            var inserted = (Document?)removed?.InsertAndBalance(branchStart, right) ?? new Document(right, _width, _locale);
+            doc = (Document)inserted.InsertAndBalance(branchStart, left);
         }
 
-        return ((Document)doc, left, right);
+        return (doc, left, right);
     }
 
 
@@ -244,62 +298,44 @@ public class Document : Node<ParagraphBranch>
 }
 
 
-public class ParagraphBranch: IBranch<ParagraphBranch>
+public class ParagraphBranch: Paragraph, IBranch<ParagraphBranch>
 {
-    private readonly Paragraph _paragraph;
+    public int Length => CharCount;
+
     
-    
-    public int Length => _paragraph.CharCount;
-    public int LineCount => _paragraph.LineCount;
-
-
-    private ParagraphBranch(Paragraph paragraph)
-    {
-        _paragraph = paragraph;
-    }
-
-    private ParagraphBranch(List<Line> lines): this(new Paragraph(lines))
+    public ParagraphBranch()
     { }
     
+    public new static ParagraphBranch Empty() => new();
     
-    public static ParagraphBranch Empty(float lineWidth, Locale? locale)
-        => new(Paragraph.Empty());
+    private ParagraphBranch(List<Line> lines): base(lines)
+    { }
     
-    public static ParagraphBranch Build(
-        float lineWidth,
-        in SourceSlice paragraph,
+    public new static ParagraphBranch Build(
+        float width,
+        in FlatSourceSlice paragraph,
         Locale? locale)
     {
-        return new ParagraphBranch(
-            Paragraph.Build(lineWidth, paragraph, locale)
-        );
+        var p = Empty();
+        p.Update(width, paragraph, 0, locale);
+        return p;
     }
-
-
-    public void Update(
-        float lineWidth,
-        in SourceSlice paragraph,
-        int changeIndex,
-        Locale? locale)
-    {
-        _paragraph.Update(lineWidth, paragraph, changeIndex, locale);
-    }
-
+    
     
     public (ParagraphBranch, ParagraphBranch) Split(int index)
     {
         Debug.Assert(0 < index && index < Length);
         
         var lineIndex = FindLine(index);
-        var leftPart = _paragraph.Lines[lineIndex].Positions.Take(index);
-        var rightPart = _paragraph.Lines[lineIndex].Positions.Skip(index);
+        var leftPart = Lines[lineIndex].Positions.Take(index);
+        var rightPart = Lines[lineIndex].Positions.Skip(index);
         
-        var rightCount = _paragraph.Lines.Count - lineIndex;
+        var rightCount = Lines.Count - lineIndex;
         var rightLine = new Line(rightPart);
         var rightLines = new List<Line>(rightCount){rightLine};
-        rightLines.AddRange(_paragraph.Lines.Skip(lineIndex));
+        rightLines.AddRange(Lines.Skip(lineIndex));
         
-        var leftLines = _paragraph.Lines.Take(lineIndex).ToList();
+        var leftLines = Lines.Take(lineIndex).ToList();
         var leftLine = new Line(leftPart);
         leftLines.Add(leftLine);
 
@@ -313,9 +349,9 @@ public class ParagraphBranch: IBranch<ParagraphBranch>
     private int FindLine(int charIndex)
     {
         var sum = 0;
-        for (var i = 0; i < _paragraph.Lines.Count; i++)
+        for (var i = 0; i < Lines.Count; i++)
         {
-            sum += _paragraph.Lines[i].Length;
+            sum += Lines[i].Length;
             if (sum <= charIndex)
                 continue;
             return i;

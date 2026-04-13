@@ -3,7 +3,7 @@ namespace HeadlessTextBox.Positioning.Models;
 // To distinguish with Slice:
 //  Range represents position;
 //  Slice represents slice.
-public record struct Range(
+public readonly record struct Range(
     float StartPos,
     float EndPos)
 {

@@ -1,29 +1,44 @@
-using HeadlessTextBox.Utils.WeightedTree;
+using HeadlessTextBox.Storage.WeightedTree;
 
 namespace HeadlessTextBox.Formatting;
 
-public class FormatTree: Node<FormatBranch>
+public class FormatTree: Node<FormatPiece>
 {
     public FormatTree(): this(default, null, null)
     { }
     
     public FormatTree(
-        FormatBranch value, 
-        Node<FormatBranch>? leftSubNode, 
-        Node<FormatBranch>? rightSubNode) 
+        FormatPiece value, 
+        FormatTree? leftSubNode, 
+        FormatTree? rightSubNode) 
         : base(value, leftSubNode, rightSubNode)
     { }
+    
+    
+    public NodeEnumerator GetEnumerator() => base.GetEnumerator();
+    
+    public NodeEnumerator EnumerateSliced(int start, int length) => base.GetEnumerator(start, length);
+    
+
+    
+    public (FormatPiece Value, int RelativeIndex) Locate(Index position) => base.Find(position);
 
 
-    public override Node<FormatBranch> InsertAndBalance(
-        int index, 
-        FormatBranch value)
+    public FormatTree Append(FormatPiece value)
     {
-        OptimizedInsert(index, value);
-        return Balance();
+        return (FormatTree)base.AppendAndBalance(value);
     }
 
-    private void OptimizedInsert(int index, FormatBranch value)
+
+    protected override FormatTree InsertAndBalance(
+        int index, 
+        FormatPiece value)
+    {
+        OptimizedInsert(index, value);
+        return (FormatTree)Balance();
+    }
+
+    private void OptimizedInsert(int index, FormatPiece value)
     {
         if (value.Length <= 0
             || index < LeftLength
@@ -42,18 +57,5 @@ public class FormatTree: Node<FormatBranch>
         
         Value = branch with { Length = branch.Length + value.Length };
         Recalculate();
-    }
-}
-
-public readonly record struct FormatBranch(
-    IFormat Format, 
-    int Length
-    ) : IBranch<FormatBranch>
-{
-    public (FormatBranch, FormatBranch) Split(int index)
-    {
-        var left = new FormatBranch(Format, index);
-        var right = new FormatBranch(Format, Length - index);
-        return (left, right);
     }
 }

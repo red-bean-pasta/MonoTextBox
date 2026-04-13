@@ -5,7 +5,7 @@ using Microsoft.Xna.Framework.Input;
 
 namespace HeadlessTextBox.Legacy;
 
-public class PagedTextBox: TextBox
+public class PagedTextBox: TextManager
 {
     private readonly Dictionary<int, List<Vector2>> _pageCharPositions = new();
 
