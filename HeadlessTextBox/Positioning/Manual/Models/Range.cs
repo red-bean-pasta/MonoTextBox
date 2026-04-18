@@ -1,4 +1,4 @@
-namespace HeadlessTextBox.Positioning.Models;
+namespace HeadlessTextBox.Positioning.Manual.Models;
 
 // To distinguish with Slice:
 //  Range represents position;

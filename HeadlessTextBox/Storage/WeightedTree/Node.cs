@@ -1,5 +1,6 @@
 using System.Buffers;
 using System.Diagnostics;
+using HeadlessTextBox.Utils;
 
 namespace HeadlessTextBox.Storage.WeightedTree;
 
@@ -105,13 +106,57 @@ public class Node<T> where T : IBranch<T>
 
     protected static Node<T> InsertToSubNode(Node<T>? subNode, T value, int insertIndex)
     {
-        if (subNode is null)
-            return new Node<T>(value, null, null);
-        else
-            return subNode.InsertAndBalance(insertIndex, value);
+        return subNode is null 
+            ? new Node<T>(value, null, null) 
+            : subNode.InsertAndBalance(insertIndex, value);
     }
 
+    
+    protected virtual Node<T> ChangeAndBalance(T value, int start, int length)
+    {
+        var result = this;
+        var remainValue = value;
+        
+        var (leftSlice, middleSlice, rightSlice) = DivideRange(start, length);
+        
+        if (leftSlice.Length > 0)
+        {
+            Debug.Assert(result.LeftSubNode is not null);
+            (var leftValue, remainValue) = remainValue.Split(leftSlice.End);
+            result.LeftSubNode = result.LeftSubNode.ChangeAndBalance(leftValue, leftSlice.Start, leftSlice.Length);
+        }
 
+        if (middleSlice.Length > 0)
+        {
+            (var middleValue, remainValue) = remainValue.Split(middleSlice.End);
+            if (middleSlice.Length == Value.Length)
+            {
+                result = result.ReplaceAndBalance(middleValue, middleSlice.Start);
+            }
+            else 
+            {
+                var currentValue = result.Value;
+                var middleLeft = middleValue;
+                var middleRight = currentValue.Split(middleSlice.End).Item2;
+                result = result.PopAndBalance(middleSlice.Start);
+                result = result?.InsertAndBalance(middleSlice.Start, middleRight) ?? BuildChildNode(middleRight);
+                result = result.InsertAndBalance(middleSlice.Start, middleLeft);
+            }
+        }
+
+        if (rightSlice.Length > 0)
+        {
+            (var rightValue, remainValue) = remainValue.Split(middleSlice.End);
+            Debug.Assert(remainValue.Length == 0);
+            Debug.Assert(result.RightSubNode is not null);
+            result.RightSubNode = result.RightSubNode.ChangeAndBalance(rightValue, rightSlice.Start - BeforeRightLength, rightSlice.Length);
+        }
+        
+        Recalculate();
+        return result.Balance();
+    }
+    
+    
     protected virtual Node<T> ReplaceAndBalance(T value, int index)
     {
         if (index < LeftLength)
@@ -138,35 +183,34 @@ public class Node<T> where T : IBranch<T>
     {
         var result = this;
         
-        var leftStart = start;
-        var leftLength = Math.Max(0, LeftLength - start);
-        if (leftLength > 0)
+        var (leftSlice, middleSlice, rightSlice) = DivideRange(start, length);
+        
+        if (leftSlice.Length > 0)
         {
             Debug.Assert(result.LeftSubNode is not null);
-            result.LeftSubNode = result.LeftSubNode.RemoveAndBalance(leftStart, leftLength);
+            result.LeftSubNode = result.LeftSubNode.RemoveAndBalance(leftSlice.Start, leftSlice.Length);
         }
 
-        var currentStart = Math.Max(start, LeftLength);
-        var currentLength = start >= BeforeRightLength ? 0 : Math.Min(length, BeforeRightLength - start);
-        if (currentLength == Value.Length)
+        if (middleSlice.Length == Value.Length)
         {
-            Debug.Assert(Value.Length > 0);
-            result = result.PopAndBalance(currentStart);
+            Debug.Assert(middleSlice.Length > 0);
+            result = result.PopAndBalance(middleSlice.Start);
         }
-        else if (currentLength > 0)
+        else if (middleSlice.Length > 0)
         {
             var value = result.Value;
-            result = result.PopAndBalance(currentStart);
-            var (l, m, r) = TrisectT(value, currentStart - LeftLength, currentStart - LeftLength + currentLength);
-            result = result?.InsertAndBalance(currentStart, r) ?? BuildChildNode(m, BuildChildNode(l), BuildChildNode(r));
+            var (l, m, r) = TrisectT(value, middleSlice.Start, middleSlice.End);
+            result = result.PopAndBalance(middleSlice.Start);
+            result = result?.InsertAndBalance(middleSlice.Start, r) 
+                     ?? BuildChildNode(r);
+            result = result.InsertAndBalance(middleSlice.Start, m);
+            result = result.InsertAndBalance(middleSlice.Start, l);
         }
 
-        var rightStart = start - BeforeRightLength;
-        var rightLength = Math.Max(start + length - BeforeRightLength, 0);
-        if (rightLength > 0)
+        if (rightSlice.Length > 0)
         {
             Debug.Assert(result?.RightSubNode != null);
-            result.RightSubNode = result.RightSubNode.RemoveAndBalance(rightStart, rightLength);
+            result.RightSubNode = result.RightSubNode.RemoveAndBalance(rightSlice.Start - BeforeRightLength, rightSlice.Length);
         }
         
         Recalculate();
@@ -350,6 +394,17 @@ public class Node<T> where T : IBranch<T>
         return (l, middle, right);
     }
 
+    protected (Slice Left, Slice Middle, Slice Right) DivideRange(int start, int length)
+    {
+        var leftSplitPoint = Math.Max(start, LeftLength);
+        var rightSplitPoint = Math.Min(start + length, BeforeRightLength);
+        
+        var left = new Slice(start, leftSplitPoint - start);
+        var middle = new Slice(leftSplitPoint, rightSplitPoint - leftSplitPoint);
+        var right = new Slice(rightSplitPoint, start + length - rightSplitPoint);
+        
+        return (left, middle, right);
+    }
 
     protected static Node<T> BuildChildNode(T value, Node<T>? leftSubNode = null, Node<T>? rightSubNode = null)
     {

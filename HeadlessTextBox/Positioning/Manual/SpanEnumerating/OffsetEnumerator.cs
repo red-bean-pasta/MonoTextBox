@@ -1,6 +1,6 @@
 using HeadlessTextBox.Utils;
 
-namespace HeadlessTextBox.Positioning.SpanEnumerating;
+namespace HeadlessTextBox.Positioning.Manual.SpanEnumerating;
 
 
 public ref struct OffsetResult

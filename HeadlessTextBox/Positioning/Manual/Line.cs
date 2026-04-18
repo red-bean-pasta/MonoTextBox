@@ -1,7 +1,7 @@
-using HeadlessTextBox.Positioning.Models;
-using Range = HeadlessTextBox.Positioning.Models.Range;
+using HeadlessTextBox.Positioning.Manual.Models;
+using Range = HeadlessTextBox.Positioning.Manual.Models.Range;
 
-namespace HeadlessTextBox.Positioning;
+namespace HeadlessTextBox.Positioning.Manual;
 
 
 public class Line

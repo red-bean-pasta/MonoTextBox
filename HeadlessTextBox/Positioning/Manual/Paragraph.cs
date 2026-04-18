@@ -1,13 +1,12 @@
 using System.Diagnostics;
 using HeadlessTextBox.Compositing.Contracts;
 using HeadlessTextBox.Formatting;
-using HeadlessTextBox.Formatting.Font;
-using HeadlessTextBox.Positioning.Models;
-using HeadlessTextBox.Positioning.WordBreaking;
+using HeadlessTextBox.Positioning.Manual.Models;
+using HeadlessTextBox.Positioning.Manual.WordBreaking;
 using Icu;
-using Range = HeadlessTextBox.Positioning.Models.Range;
+using Range = HeadlessTextBox.Positioning.Manual.Models.Range;
 
-namespace HeadlessTextBox.Positioning;
+namespace HeadlessTextBox.Positioning.Manual;
 
 public class Paragraph
 {
@@ -29,7 +28,7 @@ public class Paragraph
     
     public static Paragraph Build(
         float width,
-        in FlatSourceSlice paragraph,
+        in SourceRef paragraph,
         Locale? locale)
     {
         var p = Empty();
@@ -43,13 +42,13 @@ public class Paragraph
     
     private void Init(
         float lineWidth,
-        in FlatSourceSlice paragraph,
+        in SourceRef paragraph,
         Locale? locale) 
         => Update(lineWidth, paragraph, 0, locale);
 
     public unsafe void Update(
         float lineWidth,
-        in FlatSourceSlice paragraph,
+        in SourceRef paragraph,
         int changeIndex,
         Locale? locale)
     {
@@ -99,7 +98,7 @@ public class Paragraph
     }
     
 
-    private void AppendWord(float lineWidth, in FlatSourceSlice source)
+    private void AppendWord(float lineWidth, in SourceRef source)
     {
         if (source.GetTextSpan().IsWhiteSpace())
         {
@@ -121,7 +120,7 @@ public class Paragraph
         AppendWithinWord(source);
     }
 
-    private void AppendWhitespaces(float lineWidth, in FlatSourceSlice source)
+    private void AppendWhitespaces(float lineWidth, in SourceRef source)
     {
         var line = _lines.Last();
         foreach (var (c, f) in source)
@@ -136,7 +135,7 @@ public class Paragraph
         }
     }
     
-    private void AppendLongWord(float lineWidth, in FlatSourceSlice source)
+    private void AppendLongWord(float lineWidth, in SourceRef source)
     {
         var line = new Line();
         foreach (var (c, f) in source)
@@ -157,7 +156,7 @@ public class Paragraph
         }
     }
 
-    private void AppendWithinWord(in FlatSourceSlice source)
+    private void AppendWithinWord(in SourceRef source)
     {
         var line = _lines.Last();
         foreach (var (c, f) in source) 
@@ -189,7 +188,7 @@ public class Paragraph
     }
     
 
-    private static Range CalculateWordRange(in FlatSourceSlice source)
+    private static Range CalculateWordRange(in SourceRef source)
     {
         var range = new Range();
         foreach (var (c, f) in source)

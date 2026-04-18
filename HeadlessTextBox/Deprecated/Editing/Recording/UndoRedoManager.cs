@@ -1,6 +1,7 @@
 using System.Diagnostics;
-using HeadlessTextBox.Compositing.Contracts;
-using HeadlessTextBox.Storage;
+using System.Net.Mime;
+using HeadlessTextBox.Compositing.Storage;
+using HeadlessTextBox.Editing.Recording;
 
 namespace HeadlessTextBox.Editing;
 
@@ -8,7 +9,11 @@ public class UndoRedoManager
 {
     private readonly InputRecordStack _undoStack;
     private readonly InputRecordStack _redoStack;
-    private readonly AddBuffer _buffer = new();
+    
+    
+    private readonly MediaTypeNames.Text
+    
+    private readonly FormatBuffer _formatBuffer = new();
     
     
     public UndoRedoManager(int size)
@@ -18,13 +23,13 @@ public class UndoRedoManager
     }
 
 
-    public bool GetLastRecord(out InputRecord record) => _undoStack.GetCurrent(out record);
+    public bool GetLastRecord(out InputRecord record) => _undoStack.GetCurrentValue(out record);
 
 
     public void AddUndo(
         Caret caretBefore,
-        ReadOnlySpan<char> removed = default,
-        ReadOnlySpan<char> inserted = default)
+        ReadOnlySpan<char> removed,
+        ReadOnlySpan<char> inserted)
     {
         var removeSlice = BufferAndGetInput(removed);
         var insertSlice = BufferAndGetInput(inserted);
@@ -42,14 +47,14 @@ public class UndoRedoManager
             if (span.Length <= 0) 
                 return default;
             
-            var (start, length) = _buffer.Append(span);
+            var (start, length) = _formatBuffer.Append(span);
             return new BufferSlice(start, length);
         }
     }
 
     public void ExtendCurrentRemoved(ReadOnlySpan<char> removed)
     {
-        _buffer.Append(removed);
+        _formatBuffer.Append(removed);
         _undoStack.GetCurrent(out var record);
         Debug.Assert(record.Inserted.Length <= 0);
         record.ExtendRemoved(removed.Length);
@@ -57,7 +62,7 @@ public class UndoRedoManager
     
     public void ExtendCurrentInserted(ReadOnlySpan<char> inserted)
     {
-        _buffer.Append(inserted);
+        _formatBuffer.Append(inserted);
         _undoStack.GetCurrent(out var record);
         record.ExtendInserted(inserted.Length);
     }
@@ -68,7 +73,7 @@ public class UndoRedoManager
         if (!_undoStack.GetCurrent(out var record))
             return;
         
-        UndoRedoHelper.Undo(record, _buffer, storage);
+        UndoRedoHelper.Undo(record, _formatBuffer, storage);
         _redoStack.Add(record);
     }
     
@@ -77,7 +82,7 @@ public class UndoRedoManager
         if (!_redoStack.GetCurrent(out var record))
             return;
         
-        UndoRedoHelper.Redo(record, _buffer, storage);
+        UndoRedoHelper.Redo(record, _formatBuffer, storage);
         _undoStack.Add(record);
     }
 
@@ -86,55 +91,12 @@ public class UndoRedoManager
     {
         _redoStack.Clear();
     }
-}
 
 
-public class InputRecordStack
-{
-    private int _count;
-    private int _next;
-    private readonly InputRecord[] _buffer;
-    
-    
-    public InputRecordStack(int size = 256)
+    private void Compact()
     {
-        _buffer = new InputRecord[size];
-        _count = 0;
-        _next = 0;
-    }
-
-
-    public void Add(InputRecord record)
-    {
-        _buffer[_next] = record;
-        _count++;
-        _next++;
-        _next %= _buffer.Length;
-    }
-
-
-    public bool GetCurrent(out InputRecord record)
-    {
-        if (_count <= 0)
-        {
-            record = default;
-            return false;
-        }
-
-        var current = Wrap(_next - 1, _buffer.Length);
-        record = _buffer[current];
-        return true;
-    }
-    
-    private static int Wrap(int i, int n)
-    {
-        return (i % n + n) % n;
-    }
-
-
-    public void Clear()
-    {
-        _count = 0;
-        _next = 0;
+        throw new NotImplementedException();
     }
 }
+
+

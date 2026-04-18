@@ -1,4 +1,4 @@
-namespace HeadlessTextBox.Formatting.Font;
+namespace HeadlessTextBox.Formatting.Measuring;
 
 public readonly record struct GlyphMetrics(
     float LeftSideBearing,

@@ -1,6 +1,6 @@
 using HeadlessTextBox.Utils;
 
-namespace HeadlessTextBox.Positioning.SpanEnumerating;
+namespace HeadlessTextBox.Positioning.Manual.SpanEnumerating;
 
 public static class SpanExtensions
 {
@@ -41,14 +41,14 @@ public static class SpanExtensions
                 true, 
                 new Slice(
                     context.AbsoluteOffset, 
-                    context.AbsoluteOffset + context.Remains.Length
+                    context.Remains.Length
                 )
             );
         }
 
         var offset = new Slice(
             context.AbsoluteOffset,
-            context.AbsoluteOffset + index
+            index
         );
         var stride = 
             context.Remains[index] == '\r' 

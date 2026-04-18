@@ -1,87 +1,126 @@
 using System.Diagnostics;
+using HeadlessTextBox.Compositing.Storage;
 using HeadlessTextBox.Formatting;
-using HeadlessTextBox.Storage;
-using HeadlessTextBox.TextStoring;
 using HeadlessTextBox.Utils;
 
 namespace HeadlessTextBox.Compositing.Contracts;
 
 public class SourceBuffer
 {
-    public TextStorage Text { get; }
-    public FormatTree Format { get; }
+    private readonly TextStorage _text;
+    private readonly FormatStorage _format;
 
     
-    public int Length => Text.TextTree.Length;
+    public int Length => _text.Length;
     
     
     public SourceBuffer()
     : this(string.Empty, new FormatTree())
     { }
     
-    public SourceBuffer(string text, FormatTree format)
+    public SourceBuffer(
+        string text, 
+        FormatTree format)
     {
-        var originalBuffer = text;
-        var addedBuffer = new AddBuffer();
-        var piece = new TextPiece(0, originalBuffer.Length, TextPiece.SourceType.Original);
-        var pieceTree = new TextTree(piece, null, null);
-        Text = new TextStorage(originalBuffer, addedBuffer, pieceTree);
-        
-        Format = format;
+        _text = new TextStorage(text);
+        _format = new FormatStorage(format);
     }
     
     
-    public TextBufferEnumerator SlicedEnumerate(int start, int length) => new(this, start, length);
+    // Enumerated lazy query
+    public TextBufferEnumerator SlicedEnumerate(int start, int length) 
+        => new(_text, _format, start, length);
+    
+    
+    public (string Text, string Format) Serialize() => (_text.Serialize(), _format.Serialize());
 
 
-    public void Remove()
+    // Buffer manipulation
+    public void Insert(
+        int index, 
+        ReadOnlySpan<char> text)
     {
-        throw new NotImplementedException();
+        _text.Insert(index, text);
+        _format.Extend(index, text.Length);
+    }
+    
+    public void Insert(
+        int index, 
+        ReadOnlySpan<char> text,
+        IFormat format)
+    {
+        _text.Insert(index, text);
+        _format.Insert(index, text.Length, format);
+    }
+    
+    public void Insert(
+        int index, 
+        ReadOnlySpan<char> text,
+        IEnumerable<FormatPiece> format)
+    {
+        _text.Insert(index, text);
+
+        var pos = index;
+        foreach (var piece in format)
+        {
+            _format.Insert(pos, piece.Length, piece.Format);
+            pos += piece.Length;
+        }
+    }
+
+    public void Remove(int index, int length)
+    {
+        _text.Remove(index, length);
+        _format.Remove(index, length);
+    }
+
+    public void ChangeFormat(int index, int length, IFormat format)
+    {
+        _format.Change(index, length, format);
     }
     
 
-    public FlatSourceSlice this[Range range] => Slice(range);
+    // Flattened query
+    public SourceRef this[Range range] => Slice(range);
 
-    private FlatSourceSlice Slice(Range range)
+    private SourceRef Slice(Range range)
     {
         var (start, end) = range.GetOffsetAndLength(Length);
         return Slice(start, end);
     }
     
-    public FlatSourceSlice Slice(Slice slice) => Slice(slice.Start, slice.Length);
+    public SourceRef Slice(Slice slice) => Slice(slice.Start, slice.Length);
 
-    public FlatSourceSlice Slice(int start, int length)
+    public SourceRef Slice(int start, int length)
     {
-        return new FlatSourceSlice(start, length, this);
+        return new SourceRef(start, length, _text, _format);
     }
 }
 
 
 public ref struct TextBufferEnumerator
 {
-    private int _remaining;
-    
     private int _remainInTextSpan;
-    private TextStorageEnumerator _textEnumerator;
-    private int _remainInFormatPiece;
-    private FormatTree.NodeEnumerator _formatEnumerator;
+    private TextStorage.TextPieceEnumerator _textEnumerator;
+    private FormatStorage.FormatEnumerator _formatEnumerator;
     
     
     public TextElement Current => GetCurrent();
     
     
     public TextBufferEnumerator(
-        SourceBuffer buffer, 
+        TextStorage text,
+        FormatStorage format,
         int start = 0, 
         int length = -1)
     {
-        _remaining = length < 0 ? buffer.Length - start : length;
+        Debug.Assert(text.Length == format.Length && text.Length >= length);
         
-        _textEnumerator = buffer.Text.SlicedEnumerate(start, _remaining);
-        _formatEnumerator = buffer.Format.EnumerateSliced(start, _remaining);
+        var normalizedLength = length < 0 ? text.Length - start : length;
+        _textEnumerator = text.SlicedEnumerate(start, normalizedLength);
+        _formatEnumerator = format.SlicedEnumerate(start, normalizedLength);
 
         _remainInTextSpan = 0;
-        _remainInFormatPiece = 0;
     }
 
 
@@ -91,21 +130,16 @@ public ref struct TextBufferEnumerator
         {
             if (!_textEnumerator.MoveNext())
             {
-                Debug.Assert(_remainInFormatPiece <= 0 && !_formatEnumerator.MoveNext());
+                Debug.Assert(!_formatEnumerator.MoveNext());
                 return false;
             }
             
             _remainInTextSpan = _textEnumerator.Current.Length;
         }
 
-        if (_remainInFormatPiece <= 0)
-        {
-            _formatEnumerator.MoveNext();
-            _remainInFormatPiece = _formatEnumerator.Current.Length;
-        }
+        _formatEnumerator.MoveNext();
         
-        Debug.Assert(_remainInTextSpan > 0 && _remainInFormatPiece > 0);
-        _remaining--;
+        Debug.Assert(_remainInTextSpan > 0);
         return true;
     }
 
@@ -115,7 +149,7 @@ public ref struct TextBufferEnumerator
         var textIndex = _textEnumerator.Current.Length - _remainInTextSpan;
         var c = _textEnumerator.Current[textIndex];
         
-        var f = _formatEnumerator.Current.Format;
+        var f = _formatEnumerator.Current;
         
         return new TextElement(c, f);
     }

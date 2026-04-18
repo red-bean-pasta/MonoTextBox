@@ -9,6 +9,8 @@
     
     <ItemGroup>
       <PackageReference Include="icu.net" Version="3.0.1"/>
+      <PackageReference Include="SkiaSharp" Version="3.119.2" />
+      <PackageReference Include="SkiaSharp.HarfBuzz" Version="3.119.2" />
     </ItemGroup>
     
     <ItemGroup>

@@ -1,4 +1,5 @@
 using HeadlessTextBox.Compositing.Contracts;
+using HeadlessTextBox.Compositing.Storage;
 
 namespace HeadlessTextBox.Compositing.Serialization;
 

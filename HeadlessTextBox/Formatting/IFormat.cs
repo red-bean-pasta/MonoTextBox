@@ -1,4 +1,4 @@
-using HeadlessTextBox.Formatting.Font;
+using HeadlessTextBox.Formatting.Measuring;
 
 namespace HeadlessTextBox.Formatting;
 

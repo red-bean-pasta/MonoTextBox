@@ -1,17 +1,11 @@
 namespace HeadlessTextBox.Utils;
 
-public ref struct Slice
+public readonly record struct Slice(
+    int Start,
+    int Length)
 {
-    public int Start { get; }
-    public int End { get; }
-    
-    
-    public int Length => End - Start;
-    
-    
-    public Slice(int start, int end) => (Start, End) = (start, end);
-    
+    public int End => Start + Length;
     
     public static Slice operator +(Slice slice, int offset) 
-        => new(slice.Start + offset, slice.End + offset);
+        => new(slice.Start + offset, slice.Length);
 }

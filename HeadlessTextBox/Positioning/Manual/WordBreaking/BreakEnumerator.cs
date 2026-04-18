@@ -1,6 +1,6 @@
 using HeadlessTextBox.Utils;
 
-namespace HeadlessTextBox.Positioning.WordBreaking;
+namespace HeadlessTextBox.Positioning.Manual.WordBreaking;
 
 public ref struct BreakEnumerator
 {
@@ -13,7 +13,7 @@ public ref struct BreakEnumerator
     private bool _isFinished;
 
     
-    public Slice Current => new(_currentStart, _currentEnd);
+    public Slice Current => new(_currentStart, _currentEnd - _currentStart);
     
     
     public BreakEnumerator(

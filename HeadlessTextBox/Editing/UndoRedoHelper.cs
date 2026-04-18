@@ -1,62 +1,112 @@
 using HeadlessTextBox.Compositing.Contracts;
-using HeadlessTextBox.Storage;
+using HeadlessTextBox.Editing.Recording;
 
 namespace HeadlessTextBox.Editing;
 
 public static class UndoRedoHelper
 {
     public static void Undo(
-        in InputRecord input, 
-        AddBuffer buffer, 
-        TextStorage storage)
+        Record record, 
+        TextRefBuffer refBuffer,
+        TextBuffer charBuffer, 
+        FormatBuffer formatBuffer,
+        SourceBuffer storage)
     {
-        UndoInsert(input.InsertPosition, input.Inserted, storage);
-        UndoDelete(input.CaretBefore.Left, input.Removed, buffer, storage);
+        if (record.InsertedText.Count > 0 || record.RemovedText.Count > 0)
+        {
+            UndoInsert(record.InsertedText, refBuffer, storage);
+            UndoRemove(record.RemovedText, refBuffer, charBuffer, storage);
+        }
+        else
+        {
+            UndoFormat(record.RemovedFormat, formatBuffer, storage);
+        }
     }
-
+    
     public static void Redo(
-        in InputRecord input, 
-        AddBuffer buffer, 
-        TextStorage storage)
+        Record record, 
+        TextRefBuffer refBuffer,
+        TextBuffer charBuffer, 
+        FormatBuffer formatBuffer,
+        SourceBuffer storage)
     {
-        RedoDelete(input.CaretBefore.Left, input.Removed, storage);
-        RedoInsert(input.InsertPosition, input.Inserted, buffer, storage);
+        if (record.InsertedText.Count > 0 || record.RemovedText.Count > 0)
+        {
+            RedoRemove(record.RemovedText, refBuffer, storage);
+            RedoInsert(record.InsertedText, refBuffer, charBuffer, storage);
+        }
+        else
+        {
+            RedoFormat(record.AppliedFormat, formatBuffer, storage);
+        }
     }
-
+    
     
     private static void UndoInsert(
-        int position,
-        BufferSlice piece,
-        TextStorage storage)
+        TextUnit insertUnit,
+        TextRefBuffer refBuffer,
+        SourceBuffer storage)
     {
-        storage.Remove(position, piece.Length);
+        var refs = refBuffer.GetSpan(insertUnit.Start, insertUnit.Count);
+        foreach (var r in refs) 
+            storage.Remove(r.Position, r.Length);
+    }
+
+    private static void UndoRemove(
+        TextUnit removeUnit,
+        TextRefBuffer refBuffer,
+        TextBuffer charBuffer,
+        SourceBuffer storage)
+    {
+        RedoInsert(removeUnit, refBuffer, charBuffer, storage);
     }
     
     private static void RedoInsert(
-        int position,
-        BufferSlice piece,
-        AddBuffer buffer,
-        TextStorage storage)
+        TextUnit insertUnit,
+        TextRefBuffer refBuffer,
+        TextBuffer charBuffer,
+        SourceBuffer storage)
     {
-        var span = buffer.GetSpan(piece.Start, piece.Length);
-        storage.Insert(position, span);
+        var refs = refBuffer.GetSpan(insertUnit.Start, insertUnit.Count);
+        foreach (var r in refs)
+        {
+            var chars = charBuffer.GetSpan(r.Start, r.Length);
+            storage.Insert(r.Position, chars);
+        }
+    }
+    
+    private static void RedoRemove(
+        TextUnit removeUnit,
+        TextRefBuffer refBuffer,
+        SourceBuffer storage)
+    {
+        UndoInsert(removeUnit, refBuffer, storage);
     }
 
-
-    private static void UndoDelete(
-        int position,
-        BufferSlice piece,
-        AddBuffer buffer,
-        TextStorage storage)
+    private static void UndoFormat(
+        FormatUnit removeUnit,
+        FormatBuffer formatBuffer,
+        SourceBuffer storage)
     {
-        RedoInsert(position, piece, buffer, storage);
+        ApplyFormat(removeUnit, formatBuffer, storage);
+    }
+    
+    private static void RedoFormat(
+        FormatUnit applyUnit,
+        FormatBuffer formatBuffer,
+        SourceBuffer storage)
+    {
+        ApplyFormat(applyUnit, formatBuffer, storage);
     }
 
-    private static void RedoDelete(
-        int position,
-        BufferSlice piece,
-        TextStorage storage)
+    
+    private static void ApplyFormat(
+        FormatUnit unit,
+        FormatBuffer formatBuffer,
+        SourceBuffer storage)
     {
-        UndoInsert(position, piece, storage);
+        var formats = formatBuffer.GetSpan(unit.Start, unit.Count);
+        foreach (var f in formats)
+            storage.ChangeFormat(f.Position, f.Length, f.Format);
     }
 }

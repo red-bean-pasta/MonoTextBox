@@ -1,11 +1,11 @@
 using System.Diagnostics;
 using HeadlessTextBox.Compositing.Contracts;
+using HeadlessTextBox.Positioning.Manual.SpanEnumerating;
+using HeadlessTextBox.Storage.WeightedTree;
 using HeadlessTextBox.Utils;
 using Icu;
-using HeadlessTextBox.Positioning.SpanEnumerating;
-using HeadlessTextBox.Storage.WeightedTree;
 
-namespace HeadlessTextBox.Positioning;
+namespace HeadlessTextBox.Positioning.Manual;
 
 // Changing locale and width is effectively the same as calculating a new Document,
 // therefore not implemented
@@ -120,7 +120,7 @@ public class Document : Node<ParagraphBranch>
     private Document InsertMultiLines(int start, int length, SourceBuffer doc)
     {
         var result = this;
-        var lastSlice = new Slice(-1, -1); // Delay append to insert last new line to right
+        var lastSlice = new Slice(-1, 0); // Delay append to insert last new line to right
 
         foreach (var slice in doc.Slice(start, length).GetTextSpan().EnumerateNewLines())
         {
@@ -311,7 +311,7 @@ public class ParagraphBranch: Paragraph, IBranch<ParagraphBranch>
     
     public new static ParagraphBranch Build(
         float width,
-        in FlatSourceSlice paragraph,
+        in SourceRef paragraph,
         Locale? locale)
     {
         var p = Empty();

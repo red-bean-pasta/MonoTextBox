@@ -1,56 +1,95 @@
-using HeadlessTextBox.Utils;
 using HeadlessTextBox.Utils.Extensions;
 
 namespace HeadlessTextBox.Storage;
 
-public class AddBuffer
+public class AddBuffer<T>
 {
-    private readonly int _chunkSize;
+    protected const int DefaultSize = 64 * 1024;
     
-    private readonly List<char[]> _chunks = new();
-    private readonly List<int> _sums = new();
+    protected readonly int ChunkSize;
     
-    private int _currentChunkIndex = -1;
-    private int _currentChunkPosition = 0;
+    protected readonly List<T[]> Chunks = new();
+    protected readonly List<int> ChunkSums = new();
     
-    
-    public AddBuffer(int chunkSize = 1024 * 64) 
+    protected int InChunkNextPosition = 0;
+
+
+    protected T[] LastChunk => Chunks[^1];
+    protected int LastChunkSum
     {
-        _chunkSize = chunkSize;
+        get => ChunkSums[^1];
+        set => ChunkSums[^1] = value;
+    }
+    protected T LastItem
+    {
+        get => Chunks[^1][InChunkNextPosition - 1];
+        set => Chunks[^1][InChunkNextPosition - 1] = value;
+    }
+    
+    
+    public AddBuffer(int chunkSize = DefaultSize) 
+    {
+        ChunkSize = chunkSize;
         AddNewChunk();
     }
 
 
-    public ReadOnlySpan<char> GetSpan(int start, int length) => GetMemory(start, length).Span;
+    public ReadOnlySpan<T> GetSpan(int start, int length) => GetMemory(start, length).Span;
 
-    public ReadOnlyMemory<char> GetMemory(int start, int length)
+    public ReadOnlyMemory<T> GetMemory(int start, int length)
     {
         var chunkIndex = FindChunk(start);
-        var relativeStart = start - _sums[chunkIndex];
-        var memory = _chunks[chunkIndex].AsMemory(relativeStart, length);
+        var relativeStart = start - ChunkSums[chunkIndex];
+        var memory = Chunks[chunkIndex].AsMemory(relativeStart, length);
         return memory;
     }
     
     
-    public (int Start, int Length) Append(ReadOnlySpan<char> text) {
-        if (_currentChunkPosition + text.Length > _chunkSize) 
+    protected (int Start, int Count) Append(T value) 
+    {
+        if (InChunkNextPosition + 1 > ChunkSize) 
             AddNewChunk();
 
-        var start = _currentChunkPosition;
-        var length = text.Length;
-        
-        text.CopyTo(_chunks[_currentChunkIndex].AsSpan(start));
-        _currentChunkPosition += text.Length;
-
+        var start = InChunkNextPosition;
+        var length = 1;
+        LastChunk[InChunkNextPosition] = value;
+        InChunkNextPosition += length;
+        LastChunkSum += length;
         return (start, length);
     }
     
-    private void AddNewChunk() {
-        _chunks.Add(new char[_chunkSize]);
-        _currentChunkIndex++;
-        _currentChunkPosition = 0;
+    protected (int Start, int Length) Append(ReadOnlySpan<T> values) {
+        if (InChunkNextPosition + values.Length > ChunkSize) 
+            AddNewChunk();
+
+        var start = InChunkNextPosition;
+        var length = values.Length;
+        
+        values.CopyTo(LastChunk.AsSpan(start));
+        InChunkNextPosition += values.Length;
+        LastChunkSum += values.Length;
+        return (start, length);
+    }
+    
+    protected void AddNewChunk() {
+        Chunks.Add(new T[ChunkSize]);
+        ChunkSums.Add(0);
+        InChunkNextPosition = 0;
+    }
+    
+    
+    public void Prune(int length)
+    {
+        var start = 0 + length;
+        var chunkIndex = FindChunk(start);
+        var chunkSum = ChunkSums[chunkIndex];
+        
+        Chunks.RemoveRange(0, chunkIndex);
+        ChunkSums.RemoveRange(0, chunkSum);
+        for (var i = 0; i < ChunkSums.Count; i++) 
+            ChunkSums[i] -= chunkSum;
     }
 
 
-    private int FindChunk(int start) => _sums.FindFirstGreater(start);
+    protected int FindChunk(int start) => ChunkSums.FindFirstGreater(start);
 }

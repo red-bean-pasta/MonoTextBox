@@ -4,6 +4,7 @@ using HeadlessTextBox.Compositing.Serialization;
 using HeadlessTextBox.Editing;
 using HeadlessTextBox.Formatting;
 using HeadlessTextBox.Positioning;
+using HeadlessTextBox.Positioning.Manual;
 using HeadlessTextBox.Utils;
 using Icu;
 
@@ -66,7 +67,7 @@ public class TextManager
     }
 
 
-    public (string Text, string Format) Serialize() => Serializer.Serialize(_storage);
+    public (string Text, string Format) Serialize() => _storage.Serialize();
 
     
     /// <summary>
@@ -154,19 +155,19 @@ public class TextManager
 
         RecordInsert(text);
         
-        _storage.Text.Insert(_caret.Left, text);
+        _storage.Insert(_caret.Left, text);
         
         _caret = new Caret(_caret.Left + text.Length, 0);
     }
 
     public void Delete()
     {
-        if (_storage.Text.Length - _caret.Left < 1)
+        if (_storage.Length - _caret.Left < 1)
             return;
         
         RecordDelete();
 
-        _storage.Text.Remove(_caret.Left, Math.Max(1, _caret.Length));
+        _storage.Remove(_caret.Left, Math.Max(1, _caret.Length));
         
         _caret = new Caret(_caret.Left, 0);
     }
@@ -184,16 +185,16 @@ public class TextManager
         
         RecordBackspace();
 
-        _storage.Text.Remove(_caret.Left - 1, 1);
+        _storage.Remove(_caret.Left - 1, 1);
         
         _caret = new Caret(_caret.Left - 1, 0);
     }
 
     public void Move(int dest)
     {
-        EnforceNextUndoNew();
         AssertException.ThrowIf(_caret.Selection <= 0);
-
+        
+        EnforceNextUndoNew();
         var moved = _storage.Slice(_caret.Left, _caret.Length);
         Delete();
         _caret = new Caret(dest, 0);
@@ -206,6 +207,7 @@ public class TextManager
     {
         EnforceNextUndoNew();
         Insert(text);
+        
         EnforceNextUndoNew();
     }
 
