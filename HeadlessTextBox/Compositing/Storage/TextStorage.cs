@@ -40,7 +40,7 @@ public class TextStorage
     
     public void Insert(int position, ReadOnlySpan<char> text)
     {
-        var (start, length) = _added.AppendText(text);
+        var (start, length) = _added.Append(text);
         var piece = new TextPiece(start, length, TextPiece.SourceType.Add);
         _textTree = _textTree.Insert(position, piece);
     }

@@ -1,5 +1,6 @@
 using HeadlessTextBox.Compositing.Serialization;
 using HeadlessTextBox.Formatting;
+using JetBrains.Annotations;
 
 namespace HeadlessTextBox.Compositing.Storage;
 
@@ -21,11 +22,16 @@ public class FormatStorage
         _formatTree = formatTree;
     }
     
-    
+    [MustDisposeResource]
     public FormatEnumerator GetEnumerator() => new(_formatTree);
 
-    public FormatEnumerator SlicedEnumerate(int start, int length) => new(_formatTree, start, length);
+    [MustDisposeResource]
+    public FormatEnumerator SliceEnumerate(int start, int length) => new(_formatTree, start, length);
 
+    [MustDisposeResource]
+    public FormatTree.NodeEnumerator SliceEnumeratePieces(int start, int length) => _formatTree.SliceEnumerate(start, length);
+    
+    
     
     public string Serialize() => FormatSerializer.SerializeV1(_formatTree);
     
@@ -66,7 +72,7 @@ public class FormatStorage
             int start = 0, 
             int length = -1)
         {
-            _pieceEnumerator = tree.EnumerateSliced(start, length);
+            _pieceEnumerator = tree.SliceEnumerate(start, length);
             _remaining = 0;
         }
     

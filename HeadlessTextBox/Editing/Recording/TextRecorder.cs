@@ -44,11 +44,11 @@ public class TextRecorder
     {
         Debug.Assert(backspaceUnit.Start + backspaceUnit.Count == _refBuffer.Length);
 
-        var (addStart, addLength) = _textBuffer.AppendText(textRemoved);
+        var (addStart, addLength) = _textBuffer.Append(textRemoved);
         
         var position = caretBefore.Length > 0 ? caretBefore.Left : caretBefore.Start - 1;
         Debug.Assert(position >= 0);
-        var (refStart, refCount) = _refBuffer.AppendRef(new TextBufferRef(position, addStart, addLength));
+        var (refStart, refCount) = _refBuffer.Append(new TextBufferRef(position, addStart, addLength));
         
         return backspaceUnit with { Count = backspaceUnit.Count + refCount };
     }
@@ -73,7 +73,7 @@ public class TextRecorder
     {
         Debug.Assert(unit.Start + unit.Count == _refBuffer.Length);
         
-        var (addStart, addLength) = _textBuffer.AppendText(text);
+        var (addStart, addLength) = _textBuffer.Append(text);
         
         if (unit.Count > 0 && CheckIfExtendable(caretBefore))
         {
@@ -82,7 +82,7 @@ public class TextRecorder
         }
     
         var position = caretBefore.Left;
-        var (refStart, refCount) = _refBuffer.AppendRef(new TextBufferRef(position, addStart, addLength));
+        var (refStart, refCount) = _refBuffer.Append(new TextBufferRef(position, addStart, addLength));
 
         if (unit.Count <= 0)
             return unit with { Start = refStart, Count =  refCount };

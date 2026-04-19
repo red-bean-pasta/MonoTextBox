@@ -8,4 +8,6 @@ public readonly record struct Slice(
     
     public static Slice operator +(Slice slice, int offset) 
         => new(slice.Start + offset, slice.Length);
+
+    public Range ToRange() => new(Start, End);
 }

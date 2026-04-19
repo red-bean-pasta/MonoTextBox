@@ -3,6 +3,7 @@ using HeadlessTextBox.Compositing.Contracts;
 using HeadlessTextBox.Formatting;
 using HeadlessTextBox.Positioning.Manual.Models;
 using HeadlessTextBox.Positioning.Manual.WordBreaking;
+using HeadlessTextBox.Positioning.WordBreaking;
 using Icu;
 using Range = HeadlessTextBox.Positioning.Manual.Models.Range;
 

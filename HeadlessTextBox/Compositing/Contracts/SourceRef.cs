@@ -1,5 +1,7 @@
 using HeadlessTextBox.Compositing.Storage;
+using HeadlessTextBox.Formatting;
 using HeadlessTextBox.Utils;
+using JetBrains.Annotations;
 
 namespace HeadlessTextBox.Compositing.Contracts;
 
@@ -43,9 +45,12 @@ public readonly ref struct SourceRef
         _formatStorage = formatStorage;
     }
 
-
+    [MustDisposeResource]
     public SourceSliceEnumerator GetEnumerator() => new(Offset, Length, _formatStorage, _textCache);
-
+    
+    [MustDisposeResource]
+    public FormatTree.NodeEnumerator EnumerateFormatPieces() => _formatStorage.SliceEnumeratePieces(Offset, Length);
+    
     
     public SourceRef this[Range range] => Slice(range);
 
@@ -111,7 +116,7 @@ public ref struct SourceSliceEnumerator
         
         _index = 0;
         _textCache = textCache;
-        _formatEnumerator = formatStorage.SlicedEnumerate(offset, length);
+        _formatEnumerator = formatStorage.SliceEnumerate(offset, length);
     }
 
 

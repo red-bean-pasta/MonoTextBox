@@ -4,7 +4,6 @@ using HeadlessTextBox.Compositing.Serialization;
 using HeadlessTextBox.Editing;
 using HeadlessTextBox.Formatting;
 using HeadlessTextBox.Positioning;
-using HeadlessTextBox.Positioning.Manual;
 using HeadlessTextBox.Utils;
 using Icu;
 

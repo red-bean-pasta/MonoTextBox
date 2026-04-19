@@ -4,8 +4,6 @@ namespace HeadlessTextBox.Storage;
 
 public class AddBuffer<T>
 {
-    protected const int DefaultSize = 64 * 1024;
-    
     protected readonly int ChunkSize;
     
     protected readonly List<T[]> Chunks = new();
@@ -27,7 +25,7 @@ public class AddBuffer<T>
     }
     
     
-    public AddBuffer(int chunkSize = DefaultSize) 
+    public AddBuffer(int chunkSize) 
     {
         ChunkSize = chunkSize;
         AddNewChunk();
@@ -45,7 +43,7 @@ public class AddBuffer<T>
     }
     
     
-    protected (int Start, int Count) Append(T value) 
+    public (int Start, int Count) Append(T value) 
     {
         if (InChunkNextPosition + 1 > ChunkSize) 
             AddNewChunk();
@@ -58,7 +56,7 @@ public class AddBuffer<T>
         return (start, length);
     }
     
-    protected (int Start, int Length) Append(ReadOnlySpan<T> values) {
+    public (int Start, int Length) Append(ReadOnlySpan<T> values) {
         if (InChunkNextPosition + values.Length > ChunkSize) 
             AddNewChunk();
 

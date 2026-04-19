@@ -5,7 +5,7 @@ using HeadlessTextBox.Storage.WeightedTree;
 using HeadlessTextBox.Utils;
 using Icu;
 
-namespace HeadlessTextBox.Positioning.Manual;
+namespace HeadlessTextBox.Positioning;
 
 // Changing locale and width is effectively the same as calculating a new Document,
 // therefore not implemented
@@ -67,7 +67,8 @@ public class Document : Node<ParagraphBranch>
 
         var weightIndex = 0;
         var heightSum = 0f;
-        foreach (var paragraph in this.GetEnumerator())
+        using var nodeEnumerator = GetEnumerator();
+        foreach (var paragraph in nodeEnumerator)
         {
             heightSum += paragraph.Height;
 
@@ -349,7 +350,7 @@ public class ParagraphBranch: Paragraph, IBranch<ParagraphBranch>
         var sum = 0;
         for (var i = 0; i < Lines.Count; i++)
         {
-            sum += Lines[i].Length;
+            sum += Lines[i].CharLength;
             if (sum <= charIndex)
                 continue;
             return i;

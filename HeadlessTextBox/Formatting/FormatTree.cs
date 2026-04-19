@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using HeadlessTextBox.Storage.WeightedTree;
+using JetBrains.Annotations;
 
 namespace HeadlessTextBox.Formatting;
 
@@ -21,10 +22,11 @@ public class FormatTree: Node<FormatPiece>
     public static FormatTree Empty => new(default, null, null);
 
     
-    
+    [MustDisposeResource]
     public NodeEnumerator GetEnumerator() => base.GetEnumerator();
     
-    public NodeEnumerator EnumerateSliced(int start, int length) => base.GetEnumerator(start, length);
+    [MustDisposeResource]
+    public NodeEnumerator SliceEnumerate(int start, int length) => base.GetEnumerator(start, length);
     
 
     

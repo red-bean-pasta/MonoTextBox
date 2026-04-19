@@ -1,12 +1,14 @@
+using System.Collections.Concurrent;
+using HeadlessTextBox.Positioning.Manual.WordBreaking;
 using Icu;
 
-namespace HeadlessTextBox.Positioning.Manual.WordBreaking;
+namespace HeadlessTextBox.Positioning.WordBreaking;
 
 public static class LineBreakerManager
 {
-    private static readonly Locale SystemLocale = new Locale();
+    private static Locale SystemLocale => new();
     
-    private static readonly Dictionary<string, LineBreaker> LineBreakers = new();
+    private static readonly ConcurrentDictionary<string, LineBreaker> LineBreakers = new();
 
     public static LineBreaker Get(Locale? locale)
     {
@@ -16,7 +18,7 @@ public static class LineBreakerManager
             return breaker;
         
         breaker = new LineBreaker(locale);
-        LineBreakers.Add(locale.Id, breaker);
+        LineBreakers.TryAdd(locale.Id, breaker);
         return breaker;
     }
 }

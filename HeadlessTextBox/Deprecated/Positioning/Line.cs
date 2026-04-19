@@ -1,3 +1,4 @@
+using HarfBuzzSharp;
 using HeadlessTextBox.Positioning.Manual.Models;
 using Range = HeadlessTextBox.Positioning.Manual.Models.Range;
 
@@ -8,16 +9,15 @@ public class Line
 {
     private const float LeftEdge = 0f;
 
-
     private readonly float _height;
-    private readonly List<Slot> _positions;
+    private readonly GlyphInfo[] _infos;
+    private readonly GlyphPosition[] _positions;
 
     
     public float Height => _height;
-    public IReadOnlyList<Slot> Positions => _positions;
-    public bool Empty => Positions.Count == 0;
-    public int Length => Positions.Count;
-    public float RightEdge => Empty ? 0 : Positions[^1].Range.EndPos;
+    public ReadOnlySpan<GlyphPosition> Positions => _positions;
+    public bool Empty => Positions.Length == 0;
+    public int Length => Positions.Length;
 
 
     public Line()

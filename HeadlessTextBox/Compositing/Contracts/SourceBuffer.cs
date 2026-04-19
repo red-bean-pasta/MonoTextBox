@@ -118,7 +118,7 @@ public ref struct TextBufferEnumerator
         
         var normalizedLength = length < 0 ? text.Length - start : length;
         _textEnumerator = text.SlicedEnumerate(start, normalizedLength);
-        _formatEnumerator = format.SlicedEnumerate(start, normalizedLength);
+        _formatEnumerator = format.SliceEnumerate(start, normalizedLength);
 
         _remainInTextSpan = 0;
     }

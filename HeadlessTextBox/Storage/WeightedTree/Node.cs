@@ -1,6 +1,7 @@
 using System.Buffers;
 using System.Diagnostics;
 using HeadlessTextBox.Utils;
+using JetBrains.Annotations;
 
 namespace HeadlessTextBox.Storage.WeightedTree;
 
@@ -33,7 +34,7 @@ public class Node<T> where T : IBranch<T>
         Recalculate();
     }
     
-    
+    [MustDisposeResource]
     protected NodeEnumerator GetEnumerator(int start = 0, int length = -1) => new(this, start, length);
     
     
