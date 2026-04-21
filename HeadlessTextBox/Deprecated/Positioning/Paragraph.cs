@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using HeadlessTextBox.Compositing.Contracts;
 using HeadlessTextBox.Formatting;
+using HeadlessTextBox.Positioning.LineManaging;
 using HeadlessTextBox.Positioning.Manual.Models;
 using HeadlessTextBox.Positioning.Manual.WordBreaking;
 using HeadlessTextBox.Positioning.WordBreaking;

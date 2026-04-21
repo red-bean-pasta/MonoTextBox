@@ -1,6 +1,6 @@
 using HeadlessTextBox.Utils;
 
-namespace HeadlessTextBox.Positioning.Manual.WordBreaking;
+namespace HeadlessTextBox.Positioning.WordBreaking;
 
 public ref struct BreakEnumerator
 {

@@ -37,8 +37,6 @@ public static class FontFormatHelper
         var positions = buffer.GlyphPositions;
 
         var extents = format.Font.GetFontExtentsForDirection(Direction.LeftToRight);
-        var height = Math.Abs(extents.Ascender) + Math.Abs(extents.Descender) + extents.LineGap;
-        
-        return new FormatPieceExtent(height, infos, positions, characters);
+        return FormatPieceExtent.Build(extents, infos, positions, format, scale, characters);
     }
 }

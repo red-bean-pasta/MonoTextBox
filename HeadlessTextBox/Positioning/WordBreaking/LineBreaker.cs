@@ -1,7 +1,7 @@
 using HeadlessTextBox.Utils;
 using Icu;
 
-namespace HeadlessTextBox.Positioning.Manual.WordBreaking;
+namespace HeadlessTextBox.Positioning.WordBreaking;
 
 public unsafe class LineBreaker
 {

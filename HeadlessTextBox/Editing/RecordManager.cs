@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using HeadlessTextBox.Compositing.Contracts;
 using HeadlessTextBox.Editing.Recording;
 using HeadlessTextBox.Formatting;
 using HeadlessTextBox.Storage;
@@ -10,13 +11,36 @@ public class RecordManager: CeiledStack<Record>
 {
     private readonly TextRecorder _textRecorder = new();
     private readonly FormatRecorder _formatRecorder = new();
+    
+    private readonly CeiledStack<Record> _redoStack;
 
     private int _pruneCounter = 0;
-    
-    
-    public RecordManager(int capacity) : base(capacity)
-    { }
 
+
+    public RecordManager(int capacity) : base(capacity)
+    {
+        _redoStack = new CeiledStack<Record>(capacity);
+    }
+
+
+    public void Undo(SourceBuffer storage)
+    {
+        if (!Pop(out var record))
+            return;
+
+        UndoRedoHelper.Undo(record, _textRecorder, _formatRecorder, storage);
+        _redoStack.Add(record);
+    }
+    
+    public void Redo(SourceBuffer storage)
+    {
+        if (!_redoStack.Pop(out var record))
+            return;
+
+        UndoRedoHelper.Redo(record, _textRecorder, _formatRecorder, storage);
+        Add(record);
+    }
+    
     
     public void Insert(
         Caret caretBefore,
@@ -177,7 +201,6 @@ public class RecordManager: CeiledStack<Record>
         UpdateCurrentRecord(updatedRecord);
     }
     
-    
     private bool CheckFormatChangeMergeable()
     {
         if (!GetCurrentValue(out var last))
@@ -199,11 +222,12 @@ public class RecordManager: CeiledStack<Record>
         
         CountAndPrune();
     }
-
     
     private void UpdateCurrentRecord(Record newRecord)
     {
         Items[CurrentIndex] = newRecord;
+        
+        _redoStack.Clear();
     }
 
 

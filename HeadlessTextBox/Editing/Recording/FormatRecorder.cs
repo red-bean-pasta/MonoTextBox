@@ -8,6 +8,8 @@ public class FormatRecorder
 {
     private readonly FormatBuffer _formatBuffer = new();
     
+    public ReadOnlySpan<FormatBufferPiece> GetPieces(int start, int length) => _formatBuffer.GetSpan(start, length);
+    
     
     public (FormatUnit Removed, FormatUnit Applied) GetNewUnits()
     {

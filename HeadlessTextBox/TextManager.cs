@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using HeadlessTextBox.Compositing.Contracts;
 using HeadlessTextBox.Compositing.Serialization;
 using HeadlessTextBox.Editing;
@@ -15,7 +14,7 @@ public class TextManager
 
     private Caret _caret;
     private bool _newRecordForced;
-    private readonly UndoRedoManager _undoRedoManager;
+    private readonly RecordManager _undoRedoManager;
 
     private Document _document;
     public float Width { get; private set; }
@@ -26,16 +25,9 @@ public class TextManager
     public TextManager(
         float width,
         int undoStackSize = 256,
-        Locale? locale = null)
-    {
-        _storage = new SourceBuffer();
-        _caret = default;
-        _undoRedoManager = new UndoRedoManager(undoStackSize);
-
-        Width = width;
-        Locale = locale ?? new Locale();
-        _document = Document.Build(Width, _storage, Locale);
-    }
+        Locale? locale = null
+    ) : this(string.Empty, new FormatTree(), width, undoStackSize, locale ?? new Locale())
+    { }
 
     public TextManager(
         string text,
@@ -46,7 +38,7 @@ public class TextManager
     {
         _storage = new SourceBuffer(text, format);
         _caret = new Caret(text.Length, 0);
-        _undoRedoManager = new UndoRedoManager(undoStackSize);
+        _undoRedoManager = new RecordManager(undoStackSize);
 
         Width = width;
         Locale = locale ?? new Locale();
@@ -67,19 +59,6 @@ public class TextManager
 
 
     public (string Text, string Format) Serialize() => _storage.Serialize();
-
-    
-    /// <summary>
-    /// <see cref="VisualChar"/> returned from enumeration is relatively measured
-    /// with the document starting at (0, 0)
-    /// </summary>
-    /// <param name="startHeight"></param>
-    /// <param name="spanHeight"></param>
-    /// <returns></returns>
-    public TextElementEnumerator EnumerateInScopeElements(float startHeight, float spanHeight)
-    {
-        return new TextElementEnumerator(_storage, _document, startHeight, spanHeight);
-    }
 
 
     // Whole doc level change
@@ -213,12 +192,12 @@ public class TextManager
 
     public void Undo()
     {
-        _undoRedoManager.Undo(_storage.Text);
+        _undoRedoManager.Undo(_storage);
     }
 
     public void Redo()
     {
-        _undoRedoManager.Redo(_storage.Text);
+        _undoRedoManager.Redo(_storage);
     }
 
 
@@ -227,7 +206,7 @@ public class TextManager
     {
         if (!CheckAppendInsertUndo(_caret))
         {
-            _undoRedoManager.AddUndo(_caret, inserted);
+            _undoRedoManager.Insert(_caret, inserted);
             return;
         }
 
@@ -324,79 +303,5 @@ public class TextManager
     private void EnforceNextUndoNew()
     {
         _newRecordForced = true;
-    }
-}
-
-
-public ref struct TextElementEnumerator
-{
-    private readonly float _topY;
-    
-    private ParagraphEnumerator _inParagraphEnumerator;
-    private Document.NodeEnumerator _paragraphEnumerator;
-    
-    private TextBufferEnumerator _textEnumerator;
-    
-    
-    public VisualChar Current => GetCurrentValue();
-    
-    
-    public TextElementEnumerator(
-        SourceBuffer storage,
-        Document document,
-        float startHeight,
-        float spanHeight)
-    {
-        var (offsetHeight, startIndex, length) = document.FindInHeightIndices(startHeight, spanHeight);
-        
-        _topY = startIndex + offsetHeight;
-        _paragraphEnumerator = document.EnumerateSliced(startIndex, length);
-        _paragraphEnumerator.MoveNext();
-        _inParagraphEnumerator = _paragraphEnumerator.Current.GetEnumerator();
-        
-        _textEnumerator = storage.SlicedEnumerate(startIndex, length);
-    }
-
-
-    public TextElementEnumerator GetEnumerator() => this;
-
-    
-    public bool MoveNext()
-    {
-        if (!_textEnumerator.MoveNext())
-        {
-            Debug.Assert(!_paragraphEnumerator.MoveNext() && !_inParagraphEnumerator.MoveNext());
-            return false;
-        }
-
-        if (!_inParagraphEnumerator.MoveNext())
-        {
-            var moved = _paragraphEnumerator.MoveNext();
-            Debug.Assert(moved);
-            _inParagraphEnumerator = _paragraphEnumerator.Current.GetEnumerator();
-            _inParagraphEnumerator.MoveNext();
-        }
-
-        return true;
-    }
-
-
-    private VisualChar GetCurrentValue()
-    {
-        var (character, format) = _textEnumerator.Current;
-        var (offset, range) = _inParagraphEnumerator.Current;
-        return new VisualChar(
-            character,
-            format,
-            _topY + offset,
-            range.StartPos
-        );
-    }
-
-
-    public void Dispose()
-    {
-        _paragraphEnumerator.Dispose();
-        _textEnumerator.Dispose();
     }
 }

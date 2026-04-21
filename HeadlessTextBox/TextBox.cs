@@ -1,4 +1,3 @@
-using HeadlessTextBox.Compositing;
 using HeadlessTextBox.Formatting;
 using Icu;
 

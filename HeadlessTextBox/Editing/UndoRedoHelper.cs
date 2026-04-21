@@ -7,105 +7,101 @@ public static class UndoRedoHelper
 {
     public static void Undo(
         Record record, 
-        TextRefBuffer refBuffer,
-        TextBuffer charBuffer, 
-        FormatBuffer formatBuffer,
+        TextRecorder textRecorder, 
+        FormatRecorder formatRecorder,
         SourceBuffer storage)
     {
         if (record.InsertedText.Count > 0 || record.RemovedText.Count > 0)
         {
-            UndoInsert(record.InsertedText, refBuffer, storage);
-            UndoRemove(record.RemovedText, refBuffer, charBuffer, storage);
+            UndoInsert(record.InsertedText, textRecorder, storage);
+            UndoRemove(record.RemovedText, textRecorder, storage);
         }
         else
         {
-            UndoFormat(record.RemovedFormat, formatBuffer, storage);
+            UndoFormat(record.RemovedFormat, formatRecorder, storage);
         }
     }
     
     public static void Redo(
         Record record, 
-        TextRefBuffer refBuffer,
-        TextBuffer charBuffer, 
-        FormatBuffer formatBuffer,
+        TextRecorder textRecorder, 
+        FormatRecorder formatRecorder,
         SourceBuffer storage)
     {
         if (record.InsertedText.Count > 0 || record.RemovedText.Count > 0)
         {
-            RedoRemove(record.RemovedText, refBuffer, storage);
-            RedoInsert(record.InsertedText, refBuffer, charBuffer, storage);
+            RedoRemove(record.RemovedText, textRecorder, storage);
+            RedoInsert(record.InsertedText, textRecorder, storage);
         }
         else
         {
-            RedoFormat(record.AppliedFormat, formatBuffer, storage);
+            RedoFormat(record.AppliedFormat, formatRecorder, storage);
         }
     }
     
     
     private static void UndoInsert(
         TextUnit insertUnit,
-        TextRefBuffer refBuffer,
+        TextRecorder textRecorder,
         SourceBuffer storage)
     {
-        var refs = refBuffer.GetSpan(insertUnit.Start, insertUnit.Count);
+        var refs = textRecorder.GetRefs(insertUnit.Start, insertUnit.Count);
         foreach (var r in refs) 
             storage.Remove(r.Position, r.Length);
     }
 
     private static void UndoRemove(
         TextUnit removeUnit,
-        TextRefBuffer refBuffer,
-        TextBuffer charBuffer,
+        TextRecorder textRecorder,
         SourceBuffer storage)
     {
-        RedoInsert(removeUnit, refBuffer, charBuffer, storage);
+        RedoInsert(removeUnit, textRecorder, storage);
     }
     
     private static void RedoInsert(
         TextUnit insertUnit,
-        TextRefBuffer refBuffer,
-        TextBuffer charBuffer,
+        TextRecorder textRecorder,
         SourceBuffer storage)
     {
-        var refs = refBuffer.GetSpan(insertUnit.Start, insertUnit.Count);
+        var refs = textRecorder.GetRefs(insertUnit.Start, insertUnit.Count);
         foreach (var r in refs)
         {
-            var chars = charBuffer.GetSpan(r.Start, r.Length);
+            var chars = textRecorder.GetChars(r.Start, r.Length);
             storage.Insert(r.Position, chars);
         }
     }
     
     private static void RedoRemove(
         TextUnit removeUnit,
-        TextRefBuffer refBuffer,
+        TextRecorder textRecorder,
         SourceBuffer storage)
     {
-        UndoInsert(removeUnit, refBuffer, storage);
+        UndoInsert(removeUnit, textRecorder, storage);
     }
 
     private static void UndoFormat(
         FormatUnit removeUnit,
-        FormatBuffer formatBuffer,
+        FormatRecorder formatRecorder,
         SourceBuffer storage)
     {
-        ApplyFormat(removeUnit, formatBuffer, storage);
+        ApplyFormat(removeUnit, formatRecorder, storage);
     }
     
     private static void RedoFormat(
         FormatUnit applyUnit,
-        FormatBuffer formatBuffer,
+        FormatRecorder formatRecorder,
         SourceBuffer storage)
     {
-        ApplyFormat(applyUnit, formatBuffer, storage);
+        ApplyFormat(applyUnit, formatRecorder, storage);
     }
 
     
     private static void ApplyFormat(
         FormatUnit unit,
-        FormatBuffer formatBuffer,
+        FormatRecorder formatRecorder,
         SourceBuffer storage)
     {
-        var formats = formatBuffer.GetSpan(unit.Start, unit.Count);
+        var formats = formatRecorder.GetPieces(unit.Start, unit.Count);
         foreach (var f in formats)
             storage.ChangeFormat(f.Position, f.Length, f.Format);
     }

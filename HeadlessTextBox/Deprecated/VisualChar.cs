@@ -1,6 +1,6 @@
 using HeadlessTextBox.Formatting;
 
-namespace HeadlessTextBox;
+namespace HeadlessTextBox.Deprecated;
 
 public readonly record struct VisualChar(
     char Char,

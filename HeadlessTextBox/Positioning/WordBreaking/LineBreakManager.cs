@@ -1,5 +1,4 @@
 using System.Collections.Concurrent;
-using HeadlessTextBox.Positioning.Manual.WordBreaking;
 using Icu;
 
 namespace HeadlessTextBox.Positioning.WordBreaking;

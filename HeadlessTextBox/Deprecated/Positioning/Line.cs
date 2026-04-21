@@ -1,4 +1,5 @@
 using HarfBuzzSharp;
+using HeadlessTextBox.Positioning.LineManaging;
 using HeadlessTextBox.Positioning.Manual.Models;
 using Range = HeadlessTextBox.Positioning.Manual.Models.Range;
 

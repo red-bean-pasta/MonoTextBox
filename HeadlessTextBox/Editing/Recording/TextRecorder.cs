@@ -7,6 +7,10 @@ public class TextRecorder
     private readonly TextRefBuffer _refBuffer = new();
     private readonly TextBuffer _textBuffer = new();
 
+    
+    public ReadOnlySpan<TextBufferRef> GetRefs(int start, int length) => _refBuffer.GetSpan(start, length);
+    public ReadOnlySpan<char> GetChars(int start, int length) => _textBuffer.GetSpan(start, length);
+    
 
     public (TextUnit Removed, TextUnit Inserted) GetNewUnits()
     {

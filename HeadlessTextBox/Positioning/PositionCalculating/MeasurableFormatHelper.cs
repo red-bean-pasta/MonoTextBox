@@ -11,7 +11,6 @@ public static class MeasurableFormatHelper
         IMeasurableFormat format,
         int scale)
     {
-        var height = 0;
         var infos = new GlyphInfo[text.Length];
         var positions = new GlyphPosition[text.Length];
 
@@ -22,9 +21,8 @@ public static class MeasurableFormatHelper
             
             var id = format.GetGlyphId(c);
             var info = new GlyphInfo(){ Cluster = cluster, Codepoint = id };
-            
-            var (position, h) = CalculateGlyphExtent(c, format, scale);
-            if (h > height) height = h;
+
+            var position = CalculateGlyphPosition(c, format, scale);
                 
             infos[i] = info;
             positions[i] = position;
@@ -32,16 +30,18 @@ public static class MeasurableFormatHelper
             cluster++;
         }
         
-        return new FormatPieceExtent(height, infos, positions, text);
+        var fontExtents = CalculateFontExtents(format, scale);
+        
+        return FormatPieceExtent.Build(fontExtents, infos, positions, format, scale, text);
     }
-    
-    public static (GlyphPosition Position, int Height) CalculateGlyphExtent(
+
+    private static GlyphPosition CalculateGlyphPosition(
         char character, 
         IMeasurableFormat format,
         int scale = 1)
     {
         Debug.Assert(!char.IsControl(character));
-        var (leftBearing, width, rightBearing, ascender, descender, lineGap) = format.GetGlyphMetrics(character);
+        var (leftBearing, width, rightBearing) = format.GetGlyphMetrics(character);
         var position = new GlyphPosition()
         {
             XAdvance = (int)((leftBearing + width + rightBearing) * scale),
@@ -49,7 +49,20 @@ public static class MeasurableFormatHelper
             XOffset = 0,
             YOffset = 0
         };
-        var height = (int)((Math.Abs(ascender) + Math.Abs(descender) + lineGap) * scale);
-        return (position, height);
+        return position;
+    }
+
+    private static FontExtents CalculateFontExtents(
+        IMeasurableFormat format,
+        int scale = 1)
+    {
+        var (ascender, descender, lineGap) = format.GetFontExtents();
+        var extent = new FontExtents()
+        {
+            Ascender = (int)(ascender * scale),
+            Descender = (int)(descender * scale),
+            LineGap = (int)(lineGap * scale)
+        };
+        return extent;
     }
 }

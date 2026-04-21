@@ -12,6 +12,8 @@ public interface IMeasurableFormat : IFormat, IEquatable<IMeasurableFormat>
     uint GetGlyphId(char character);
     
     GlyphMetrics GetGlyphMetrics(char character);
+    
+    FormatExtents GetFontExtents();
 }
 
 

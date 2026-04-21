@@ -1,19 +1,19 @@
 using HarfBuzzSharp;
 
-namespace HeadlessTextBox.Compositing.Contracts;
+namespace HeadlessTextBox.Positioning.LineManaging;
 
 /// <summary>
 /// 
 /// </summary>
 /// <param name="Id">Same as <see cref="GlyphInfo.Codepoint"/></param>
+/// <param name="Cluster"></param>
 /// <param name="X"></param>
-/// <param name="Y"></param>
 /// <param name="XOffset"></param>
 /// <param name="YOffset"></param>
-public readonly record struct GlyphData(
+public readonly record struct LineGlyph(
     uint Id,
-    float X,
-    float Y,
-    float XOffset,
-    float YOffset
+    uint Cluster,
+    int X,
+    int XOffset,
+    int YOffset
 );

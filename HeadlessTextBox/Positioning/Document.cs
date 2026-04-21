@@ -1,6 +1,6 @@
 using System.Diagnostics;
 using HeadlessTextBox.Compositing.Contracts;
-using HeadlessTextBox.Positioning.Manual.SpanEnumerating;
+using HeadlessTextBox.Positioning.SpanEnumerating;
 using HeadlessTextBox.Storage.WeightedTree;
 using HeadlessTextBox.Utils;
 using Icu;
@@ -9,7 +9,7 @@ namespace HeadlessTextBox.Positioning;
 
 // Changing locale and width is effectively the same as calculating a new Document,
 // therefore not implemented
-public class Document : Node<ParagraphBranch>
+public class Document : Node<Paragraph>
 {
     private readonly float _width;
 
@@ -25,7 +25,7 @@ public class Document : Node<ParagraphBranch>
     
 
     private Document(
-        ParagraphBranch branch,
+        Paragraph branch,
         float width,
         Locale? locale)
         : base(branch, null, null)
@@ -43,7 +43,7 @@ public class Document : Node<ParagraphBranch>
 
         foreach (var slice in doc[..].GetTextSpan().EnumerateNewLines())
         {
-            var paragraph = ParagraphBranch.Build(width, doc.Slice(slice), locale);
+            var paragraph = Paragraph.Build(width, doc.Slice(slice), locale);
 
             if (result is null)
                 result = new Document(paragraph, width, locale);
@@ -55,9 +55,6 @@ public class Document : Node<ParagraphBranch>
         return result;
     }
     
-
-    public NodeEnumerator EnumerateSliced(int start, int length) => base.GetEnumerator(start, length);
-
     
     public (float OffsetHeight, int StartIndex, int Length) FindInHeightIndices(float startHeight, float spanHeight)
     {
@@ -121,35 +118,40 @@ public class Document : Node<ParagraphBranch>
     private Document InsertMultiLines(int start, int length, SourceBuffer doc)
     {
         var result = this;
-        var lastSlice = new Slice(-1, 0); // Delay append to insert last new line to right
+        
+        var (paragraph, inParaIndex) = Find(start);
+        var originalLeftLength = inParaIndex - 0;
+        var originalRightLength = paragraph.Length - inParaIndex;
 
+        var isFirst = true;
+        var lastSlice = new Slice(-1, 0); 
         foreach (var slice in doc.Slice(start, length).GetTextSpan().EnumerateNewLines())
         {
-            var absolute = slice + start;
             if (lastSlice.Start == -1)
             {
-                lastSlice = absolute;
+                lastSlice = slice; // Delay append to insert last new line to right
+                continue;
+            }
+            
+            if (isFirst)
+            {
+                var leftSlice = slice.Offset(start).Offset(-inParaIndex).Extend(originalLeftLength);
+                var leftContent = doc.Slice(leftSlice);
+                var leftParagraph = paragraph; 
+                leftParagraph.Update(_width, leftContent, inParaIndex, _locale);
+                isFirst = false;
                 continue;
             }
 
-            result = result.InsertSplitLine(lastSlice, doc, true);
-            lastSlice = slice;
+            var middleSlice = slice.Offset(start);
+            var middleContent = doc.Slice(middleSlice);
+            var middleParagraph = Paragraph.Build(_width, middleContent, _locale);
+            Insert(middleParagraph, middleSlice.Start);
         }
-
-        result = result.InsertSplitLine(lastSlice, doc, false);
-
-        return result;
-    }
-
-    private Document InsertSplitLine(Slice slice, SourceBuffer doc, bool toLeft)
-    {
-        var (result, left, right) = FindAndSplit(slice.Start);
-
-        var target = toLeft ? left : right;
-        var start = toLeft ? slice.Start - target.Length : slice.Start;
-        var length = target.Length + slice.Length;
-        var content = doc.Slice(start, length);
-        target.Update(_width, content, slice.Start, _locale);
+        var rightSlice = lastSlice.Offset(start).Extend(originalRightLength);
+        var rightContent = doc.Slice(rightSlice);
+        var rightParagraph = Paragraph.Build(_width, rightContent, _locale);
+        Insert(rightParagraph, rightSlice.Start);
 
         return result;
     }
@@ -193,14 +195,14 @@ public class Document : Node<ParagraphBranch>
         return result;
     }
 
-    private (Document Doc, ParagraphBranch First, ParagraphBranch Last) RemoveLinesAndPop(
+    private (Document Doc, Paragraph First, Paragraph Last) RemoveLinesAndPop(
         int start,
         ReadOnlySpan<char> removed,
         SourceBuffer doc)
     {
         Document? document = this;
-        ParagraphBranch? first = null;
-        ParagraphBranch? last = null;
+        Paragraph? first = null;
+        Paragraph? last = null;
         foreach (var slice in removed.EnumerateNewLines())
         {
             var absoluteStart = start;
@@ -224,7 +226,7 @@ public class Document : Node<ParagraphBranch>
     private void RemoveParagraphLine(
         SourceBuffer doc,
         int absoluteIndex,
-        ParagraphBranch paragraph,
+        Paragraph paragraph,
         int relativeIndex,
         int removedLength)
     {
@@ -248,113 +250,17 @@ public class Document : Node<ParagraphBranch>
     }
 
 
-    private (Document Doc, ParagraphBranch Left, ParagraphBranch Right) FindAndSplit(int index)
-    {
-        var (branch, innerIndex) = Find(index);
-        var branchStart = index - innerIndex;
-        var branchEnd = branchStart + branch.Length;
-
-        Document doc;
-        ParagraphBranch left;
-        ParagraphBranch right;
-        if (innerIndex == 0)
-        {
-            left = ParagraphBranch.Empty();
-            right = branch;
-            doc = (Document)InsertAndBalance(branchStart, left);
-        }
-        else if (innerIndex == branch.Length)
-        {
-            left = branch;
-            right = ParagraphBranch.Empty();
-            doc = (Document)InsertAndBalance(branchEnd, right);
-        }
-        else
-        {
-            (left, right) = branch.Split(innerIndex);
-            var removed = (Document?)PopAndBalance(branchStart);
-            var inserted = (Document?)removed?.InsertAndBalance(branchStart, right) ?? new Document(right, _width, _locale);
-            doc = (Document)inserted.InsertAndBalance(branchStart, left);
-        }
-
-        return (doc, left, right);
-    }
-
-
-    private ParagraphBranch MergeParagraph(
+    private Paragraph MergeParagraph(
         SourceBuffer doc,
         int start,
-        ParagraphBranch left, 
-        ParagraphBranch right)
+        Paragraph left, 
+        Paragraph right)
     {
         var length = left.Length + right.Length;
         var content = doc.Slice(start, length);
-        return ParagraphBranch.Build(_width, content, _locale);
+        return Paragraph.Build(_width, content, _locale);
     }
 
 
     private static bool HasNewLine(ReadOnlySpan<char> text) => text.IndexNewLine() >= 0;
-}
-
-
-public class ParagraphBranch: Paragraph, IBranch<ParagraphBranch>
-{
-    public int Length => CharCount;
-
-    
-    public ParagraphBranch()
-    { }
-    
-    public new static ParagraphBranch Empty() => new();
-    
-    private ParagraphBranch(List<Line> lines): base(lines)
-    { }
-    
-    public new static ParagraphBranch Build(
-        float width,
-        in SourceRef paragraph,
-        Locale? locale)
-    {
-        var p = Empty();
-        p.Update(width, paragraph, 0, locale);
-        return p;
-    }
-    
-    
-    public (ParagraphBranch, ParagraphBranch) Split(int index)
-    {
-        Debug.Assert(0 < index && index < Length);
-        
-        var lineIndex = FindLine(index);
-        var leftPart = Lines[lineIndex].Positions.Take(index);
-        var rightPart = Lines[lineIndex].Positions.Skip(index);
-        
-        var rightCount = Lines.Count - lineIndex;
-        var rightLine = new Line(rightPart);
-        var rightLines = new List<Line>(rightCount){rightLine};
-        rightLines.AddRange(Lines.Skip(lineIndex));
-        
-        var leftLines = Lines.Take(lineIndex).ToList();
-        var leftLine = new Line(leftPart);
-        leftLines.Add(leftLine);
-
-        return (
-            new ParagraphBranch(leftLines), 
-            new ParagraphBranch(rightLines)
-        );
-    }
-
-
-    private int FindLine(int charIndex)
-    {
-        var sum = 0;
-        for (var i = 0; i < Lines.Count; i++)
-        {
-            sum += Lines[i].CharLength;
-            if (sum <= charIndex)
-                continue;
-            return i;
-        }
-        throw new IndexOutOfRangeException();
-    }
 }

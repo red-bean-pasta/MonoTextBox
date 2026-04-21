@@ -35,12 +35,11 @@ public readonly ref struct SourceRef
 
     private SourceRef(
         int offset,
-        int length,
         ReadOnlySpan<char> textCache,
         FormatStorage formatStorage)
     {
         Offset = offset;
-        Length = length;
+        Length = textCache.Length;
         _textCache = textCache;
         _formatStorage = formatStorage;
     }
@@ -66,7 +65,7 @@ public readonly ref struct SourceRef
     {
         var newOffset = Offset + offset;
         var newTextCache = _textCache.Slice(newOffset, length);
-        return new SourceRef(newOffset, length, newTextCache, _formatStorage);
+        return new SourceRef(newOffset, newTextCache, _formatStorage);
     }
 
     

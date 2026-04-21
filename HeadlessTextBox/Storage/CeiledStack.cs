@@ -1,6 +1,6 @@
 namespace HeadlessTextBox.Storage;
 
-public abstract class CeiledStack<T>
+public class CeiledStack<T>
 {
     protected int Count;
     protected int Next;
@@ -12,7 +12,7 @@ public abstract class CeiledStack<T>
     protected int CurrentIndex => Wrap(Next - 1, Capacity);
     
     
-    protected CeiledStack(int size)
+    public CeiledStack(int size)
     {
         Items = new T[size];
         Count = 0;
@@ -20,14 +20,23 @@ public abstract class CeiledStack<T>
     }
 
 
-    protected void Add(in T item)
+    public void Add(in T item)
     {
         Items[Next] = item;
         MoveToNextSlot();
     }
 
+    public bool Pop(out T value)
+    {
+        if (!GetCurrentValue(out value))
+            return false;
+        
+        MoveToPreviousSlot();
+        return true;
+    }
 
-    protected bool GetCurrentValue(out T value)
+
+    public bool GetCurrentValue(out T value)
     {
         if (Count <= 0)
         {
@@ -39,7 +48,7 @@ public abstract class CeiledStack<T>
         return true;
     }
 
-    protected bool GetFirstValue(out T value)
+    public bool GetFirstValue(out T value)
     {
         if (Count <= 0)
         {
@@ -58,12 +67,21 @@ public abstract class CeiledStack<T>
     }
     
     
-    protected void Clear()
+    public void Clear()
     {
         Count = 0;
         Next = 0;
     }
-
+    
+    
+    protected void MoveToPreviousSlot()
+    {
+        if (Count <= 0) return;
+        
+        Count--;
+        Next--;
+        Wrap(Next, Capacity);
+    }
     
     protected void MoveToNextSlot()
     {

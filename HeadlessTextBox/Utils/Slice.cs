@@ -6,8 +6,11 @@ public readonly record struct Slice(
 {
     public int End => Start + Length;
     
-    public static Slice operator +(Slice slice, int offset) 
-        => new(slice.Start + offset, slice.Length);
+    public Slice Offset(int offset) 
+        => new(Start + offset, Length);
+
+    public Slice Extend(int length)
+        => new(Start, Length + length);
 
     public Range ToRange() => new(Start, End);
 }

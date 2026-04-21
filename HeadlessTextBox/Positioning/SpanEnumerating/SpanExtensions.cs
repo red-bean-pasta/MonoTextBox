@@ -1,6 +1,6 @@
 using HeadlessTextBox.Utils;
 
-namespace HeadlessTextBox.Positioning.Manual.SpanEnumerating;
+namespace HeadlessTextBox.Positioning.SpanEnumerating;
 
 public static class SpanExtensions
 {
