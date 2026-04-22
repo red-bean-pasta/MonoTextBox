@@ -1,4 +1,5 @@
 using HeadlessTextBox.Storage.WeightedTree;
+using JetBrains.Annotations;
 
 namespace HeadlessTextBox.TextStoring;
 
@@ -16,8 +17,10 @@ public class TextTree: Node<TextPiece>
     public static TextTree Empty => new(new TextPiece(0, 0, TextPiece.SourceType.Original), null, null);
     
     
+    [MustDisposeResource]
     public NodeEnumerator GetEnumerator() => base.GetEnumerator();
 
+    [MustDisposeResource]
     public NodeEnumerator SlicedEnumerate(int start, int length) => new(this, start, length);
 
 

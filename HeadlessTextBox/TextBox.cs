@@ -1,5 +1,7 @@
 using HeadlessTextBox.Formatting;
+using HeadlessTextBox.Positioning;
 using Icu;
+using JetBrains.Annotations;
 
 namespace HeadlessTextBox;
 
@@ -70,7 +72,7 @@ public class TextBox
     }
     
     
-    public TextBoxContentEnumerator EnumerateInScope() 
+    public TextBoxGlyphEnumerator EnumerateInScope() 
         => new(X, Y, Height, Scrolled, Buffer);
 
 
@@ -94,45 +96,43 @@ public class TextBox
 }
 
 
-public ref struct TextBoxContentEnumerator
+[MustDisposeResource]
+public ref struct TextBoxGlyphEnumerator
 {
-    private readonly float _x;
-    private readonly float _y;
-    private readonly float _scrolled;
+    private readonly float _boxX;
+    private readonly float _boxY;
+    private readonly float _scrolledY;
 
-    private TextElementEnumerator _elementEnumerator;
+    private Document.DocumentGlyphEnumerator _glyphEnumerator;
 
-
-    public VisualChar Current => GetCurrentValue();
+    public VisualGlyph Current => GetCurrentValue();
     
-
-    public TextBoxContentEnumerator(
-        float x,
-        float y,
+    public TextBoxGlyphEnumerator(
+        float boxX,
+        float boxY,
         float height,
-        float scrolled,
+        float scrolledY,
         TextManager textManager)
     {
-        _x = x;
-        _y = y;
-        _scrolled = scrolled;
-        _elementEnumerator = textManager.EnumerateInScopeElements(scrolled, height);
+        _boxX = boxX;
+        _boxY = boxY;
+        _scrolledY = scrolledY;
+        _glyphEnumerator = textManager.EnumerateVisualGlyphs(scrolledY, height);
     }
 
-
-    public TextBoxContentEnumerator GetEnumerator() => this;
-    
+    public TextBoxGlyphEnumerator GetEnumerator() => this;
         
-    public bool MoveNext() => _elementEnumerator.MoveNext();
+    public bool MoveNext() => _glyphEnumerator.MoveNext();
 
-
-    private VisualChar GetCurrentValue()
+    private VisualGlyph GetCurrentValue()
     {
-        var raw = _elementEnumerator.Current;
+        var raw = _glyphEnumerator.Current;
         return raw with
         {
-            X = raw.X + _x,
-            Y = raw.Y + _y + _scrolled
+            X = raw.X + _boxX,
+            Y = raw.Y + _boxY + _scrolledY
         };
     }
+    
+    public void Dispose() => _glyphEnumerator.Dispose();
 }

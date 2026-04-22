@@ -36,12 +36,13 @@ public class SourceBuffer
 
 
     // Buffer manipulation
-    public void Insert(
+    public IFormat Insert(
         int index, 
         ReadOnlySpan<char> text)
     {
         _text.Insert(index, text);
-        _format.Extend(index, text.Length);
+        var format = _format.Extend(index, text.Length);
+        return format;
     }
     
     public void Insert(

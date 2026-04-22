@@ -4,19 +4,18 @@ using JetBrains.Annotations;
 namespace HeadlessTextBox.Utils;
 
 [MustDisposeResource]
-public struct RentedArray<T> : IDisposable
+public struct RentedList<T> : IDisposable
 {
     public int Count { get; private set; }
-    private readonly T[] _buffer;
+    private T[] _buffer;
     
     
     public T LastItem => _buffer[Count - 1];
-    public bool IsFull => Count >= _buffer.Length;
     
     
-    public RentedArray(int length)
+    public RentedList(int capacity)
     {
-        _buffer = ArrayPool<T>.Shared.Rent(length);
+        _buffer = ArrayPool<T>.Shared.Rent(capacity);
         Count = 0;
     }
     
@@ -28,6 +27,18 @@ public struct RentedArray<T> : IDisposable
     {
         _buffer[Count] = value;
         Count++;
+
+        if (Count >= _buffer.Length)
+            ExpandAndCopy();
+    }
+
+    private void ExpandAndCopy()
+    {
+        var expanded = ArrayPool<T>.Shared.Rent(Count * 2);
+        Array.Copy(_buffer, 0, expanded, 0, Count);
+        
+        Dispose();
+        _buffer = expanded;
     }
 
 

@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using HeadlessTextBox.Compositing.Contracts;
 using HeadlessTextBox.Compositing.Serialization;
 using HeadlessTextBox.Editing;
@@ -5,6 +6,7 @@ using HeadlessTextBox.Formatting;
 using HeadlessTextBox.Positioning;
 using HeadlessTextBox.Utils;
 using Icu;
+using JetBrains.Annotations;
 
 namespace HeadlessTextBox;
 
@@ -60,6 +62,11 @@ public class TextManager
 
     public (string Text, string Format) Serialize() => _storage.Serialize();
 
+    
+    [MustDisposeResource]
+    public Document.DocumentGlyphEnumerator EnumerateVisualGlyphs(float startHeight, float spanHeight) 
+        => _document.SliceEnumerateVisualGlyphs(startHeight, spanHeight);
+    
 
     // Whole doc level change
     public void Resize(float newWidth)
@@ -130,10 +137,27 @@ public class TextManager
             // EnforceNextUndoNew(); // Selection already triggered OnCaretMoved() and EnforceNextUndoNew()
             Delete();
         }
+        
+        var format = _storage.Insert(_caret.Left, text);
 
-        RecordInsert(text);
+        var formatPiece = new FormatPiece(format, text.Length);
+        var formatSpan = MemoryMarshal.CreateReadOnlySpan(ref formatPiece, 1);
+        RecordInsert(text, formatSpan);
+        
+        _caret = new Caret(_caret.Left + text.Length, 0);
+    }
+    
+    public void Insert(ReadOnlySpan<char> text, ReadOnlySpan<FormatPiece> formats)
+    {
+        if (_caret.Length > 0)
+        {
+            // EnforceNextUndoNew(); // Selection already triggered OnCaretMoved() and EnforceNextUndoNew()
+            Delete();
+        }
         
         _storage.Insert(_caret.Left, text);
+
+        RecordInsert(text, formats);
         
         _caret = new Caret(_caret.Left + text.Length, 0);
     }
@@ -143,9 +167,9 @@ public class TextManager
         if (_storage.Length - _caret.Left < 1)
             return;
         
-        RecordDelete();
-
         _storage.Remove(_caret.Left, Math.Max(1, _caret.Length));
+        
+        RecordDelete();
         
         _caret = new Caret(_caret.Left, 0);
     }
@@ -202,15 +226,9 @@ public class TextManager
 
 
     // Undo and redo management
-    private void RecordInsert(ReadOnlySpan<char> inserted)
+    private void RecordInsert(ReadOnlySpan<char> inserted, ReadOnlySpan<FormatPiece> formats)
     {
-        if (!CheckAppendInsertUndo(_caret))
-        {
-            _undoRedoManager.Insert(_caret, inserted);
-            return;
-        }
-
-        _undoRedoManager.ExtendCurrentInserted(inserted);
+        _undoRedoManager.Insert(_caret, inserted, formats, !CheckAppendInsertUndo(_caret));
     }
     
     private bool CheckAppendInsertUndo(Caret caretBefore)
@@ -218,8 +236,8 @@ public class TextManager
         if (!CheckAppendUndoBase())
             return false;
 
-        _undoRedoManager.GetLastRecord(out var record);
-        if (record.CaretBefore.Left + record.Inserted.Length != caretBefore.Left)
+        _undoRedoManager.GetCurrentValue(out var record);
+        if (record.CaretBefore.Left + record.InsertedText.Count != caretBefore.Left)
             return false;
         
         return true;
@@ -227,17 +245,10 @@ public class TextManager
     
     private void RecordDelete()
     {
-        var deleted = _storage
-            .Slice(_caret.Left, Math.Max(_caret.Length, 1))
-            .GetTextSpan();
-
-        if (!CheckAppendDeleteUndo(_caret))
-        {
-            _undoRedoManager.AddUndo(_caret, deleted);
-            return;
-        }
-
-        _undoRedoManager.ExtendCurrentRemoved(deleted);
+        var slice = _storage.Slice(_caret.Left, Math.Max(_caret.Length, 1));
+        var deletedText = slice.GetTextSpan();
+        using var deletedFormats = FlattenFormatPieces(slice);
+        _undoRedoManager.Delete(_caret, deletedText, deletedFormats.AsSpan(), !CheckAppendDeleteUndo(_caret));
     }
     
     private bool CheckAppendDeleteUndo(Caret caretBefore)
@@ -245,8 +256,8 @@ public class TextManager
         if (!CheckAppendUndoBase())
             return false;
 
-        _undoRedoManager.GetLastRecord(out var record);
-        if (record.Inserted.Length > 0)
+        _undoRedoManager.GetCurrentValue(out var record);
+        if (record.InsertedText.Count > 0)
             return false;
         
         if (record.CaretBefore.Left != caretBefore.Left)
@@ -257,18 +268,12 @@ public class TextManager
     
     private void RecordBackspace()
     {
-        var storageSlice = _caret.Length == 0 
+        var slice = _caret.Length == 0 
             ? _storage.Slice(_caret.Left - 1, 1)
             : _storage.Slice(_caret.Left, _caret.Length);
-        var backspaced = storageSlice.GetTextSpan();
-
-        if (!CheckAppendBackspaceUndo(_caret))
-        {
-            _undoRedoManager.AddUndo(_caret, backspaced);
-            return;
-        }
-
-        _undoRedoManager.ExtendCurrentRemoved(backspaced);
+        var backspacedText = slice.GetTextSpan();
+        using var backspacedFormats = FlattenFormatPieces(slice);
+        _undoRedoManager.Backspace(_caret, backspacedText, backspacedFormats.AsSpan(), !CheckAppendBackspaceUndo(_caret));
     }
 
     private bool CheckAppendBackspaceUndo(Caret caretBefore)
@@ -276,11 +281,11 @@ public class TextManager
         if (!CheckAppendUndoBase())
             return false;
         
-        _undoRedoManager.GetLastRecord(out var record);
-        if (record.Inserted.Length > 0)
+        _undoRedoManager.GetCurrentValue(out var record);
+        if (record.InsertedText.Count > 0)
             return false;
     
-        if (caretBefore.Left + record.Removed.Length != record.CaretBefore.Right)
+        if (caretBefore.Left + record.RemovedText.Count != record.CaretBefore.Right)
             return false;
     
         return true;
@@ -294,7 +299,7 @@ public class TextManager
             return false;
         }
     
-        if (!_undoRedoManager.GetLastRecord(out _))
+        if (!_undoRedoManager.GetCurrentValue(out _))
             return false;
 
         return true;
@@ -303,5 +308,16 @@ public class TextManager
     private void EnforceNextUndoNew()
     {
         _newRecordForced = true;
+    }
+
+
+    [MustDisposeResource]
+    private static RentedList<FormatPiece> FlattenFormatPieces(in SourceRef source)
+    {
+        var rented = new RentedList<FormatPiece>(8);
+        using var enumerator = source.EnumerateFormatPieces();
+        foreach (var piece in enumerator)
+            rented.Add(piece);
+        return rented;
     }
 }

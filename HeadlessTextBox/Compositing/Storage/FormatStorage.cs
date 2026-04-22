@@ -32,13 +32,13 @@ public class FormatStorage
     public FormatTree.NodeEnumerator SliceEnumeratePieces(int start, int length) => _formatTree.SliceEnumerate(start, length);
     
     
-    
     public string Serialize() => FormatSerializer.SerializeV1(_formatTree);
     
     
-    public void Extend(int position, int length)
+    public IFormat Extend(int position, int length)
     {
-        _formatTree = _formatTree.Extend(position, length);
+        (_formatTree, var format) = _formatTree.Extend(position, length);
+        return format;
     }
     
     public void Insert(int position, int length, IFormat format)

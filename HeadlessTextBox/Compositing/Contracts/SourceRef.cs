@@ -1,3 +1,4 @@
+using System.Data;
 using HeadlessTextBox.Compositing.Storage;
 using HeadlessTextBox.Formatting;
 using HeadlessTextBox.Utils;
@@ -19,7 +20,7 @@ public readonly ref struct SourceRef
     private readonly FormatStorage _formatStorage;
 
     private readonly ReadOnlySpan<char> _textCache;
-    
+
     
     public SourceRef(
         int offset, 

@@ -4,6 +4,7 @@ using HeadlessTextBox.Positioning.SpanEnumerating;
 using HeadlessTextBox.Storage.WeightedTree;
 using HeadlessTextBox.Utils;
 using Icu;
+using JetBrains.Annotations;
 
 namespace HeadlessTextBox.Positioning;
 
@@ -15,7 +16,7 @@ public class Document : Node<Paragraph>
 
     private readonly Locale? _locale;
 
-
+    
     /// <summary>
     /// To distinguish with <see cref="Node{T}.SubTreeHeight"/>: <br/>
     /// <see cref="SubTreeHeightY"/>: positional height in Y <br/>
@@ -32,6 +33,8 @@ public class Document : Node<Paragraph>
     {
         _width = width;
         _locale = locale;
+        
+        CalculateHeight();
     }
 
     public static Document Build(
@@ -54,38 +57,11 @@ public class Document : Node<Paragraph>
         Debug.Assert(result is not null);
         return result;
     }
-    
-    
-    public (float OffsetHeight, int StartIndex, int Length) FindInHeightIndices(float startHeight, float spanHeight)
-    {
-        var offsetHeight = 0f;
-        var startIndex = -1;
-        var endIndex = -1;
 
-        var weightIndex = 0;
-        var heightSum = 0f;
-        using var nodeEnumerator = GetEnumerator();
-        foreach (var paragraph in nodeEnumerator)
-        {
-            heightSum += paragraph.Height;
 
-            if (startIndex == -1 && heightSum >= startHeight)
-            {
-                startIndex = weightIndex;
-                offsetHeight = heightSum - paragraph.Height - startHeight;
-            }
-
-            if (heightSum >= startHeight + spanHeight)
-            {
-                endIndex = weightIndex;
-                break;
-            }
-            
-            weightIndex += paragraph.Length;
-        }
-        
-        return (offsetHeight, startIndex, endIndex - startIndex);
-    }
+    [MustDisposeResource]
+    public DocumentGlyphEnumerator SliceEnumerateVisualGlyphs(float startHeight, float spanHeight) 
+        => new(this, startHeight, spanHeight);
 
 
     /// <summary>
@@ -241,14 +217,18 @@ public class Document : Node<Paragraph>
 
     protected override void Recalculate()
     {
+        base.Recalculate();
+        CalculateHeight();
+    }
+
+    private void CalculateHeight()
+    {
         SubTreeHeightY = 
             Value.Height
             + (((Document?)LeftSubNode)?.SubTreeHeightY ?? 0)
             + (((Document?)RightSubNode)?.SubTreeHeightY ?? 0);
-        
-        base.Recalculate();
     }
-
+    
 
     private Paragraph MergeParagraph(
         SourceBuffer doc,
@@ -263,4 +243,65 @@ public class Document : Node<Paragraph>
 
 
     private static bool HasNewLine(ReadOnlySpan<char> text) => text.IndexNewLine() >= 0;
+
+
+    private (int Start, float InParagraphHeight, Paragraph Paragraph) FindParagraphWithHeight(float startY)
+    {
+        Debug.Assert(startY >= 0);
+        
+        var left = (Document?)LeftSubNode;
+        var leftHeight = left?.SubTreeHeightY ?? 0;
+        if (startY < leftHeight)
+        {
+            Debug.Assert(left is not null);
+            return left.FindParagraphWithHeight(startY);
+        }
+
+        var right = (Document?)RightSubNode;
+        var beforeRightHeight = Value.Height + leftHeight;
+        if (right is not null && startY >= beforeRightHeight)
+        {
+            Debug.Assert(right is not null);
+            return right.FindParagraphWithHeight(startY - beforeRightHeight);
+        }
+
+        return (LeftLength, Value.Length, Value);
+    }
+
+
+    [MustDisposeResource]
+    public ref struct DocumentGlyphEnumerator
+    {
+        private NodeEnumerator _paragraphEnumerator;
+        private Paragraph.VisualGlyphEnumerator _paraGlyphEnumerator;
+        
+        public VisualGlyph Current => _paraGlyphEnumerator.Current;
+        
+        public DocumentGlyphEnumerator(Document document, float startHeight, float spanHeight)
+        {
+            var (startIndex, inStartHeight, startParagraph) = document.FindParagraphWithHeight(startHeight);
+            var (endIndex, inEndHeight, endParagraph) = document.FindParagraphWithHeight(spanHeight);
+            var start = startIndex;
+            var end = endIndex + endParagraph.Length;
+
+            _paragraphEnumerator = document.GetEnumerator(start, end);
+            _paragraphEnumerator.MoveNext();
+            _paraGlyphEnumerator = _paragraphEnumerator.Current.GetEnumerator();
+        }
+
+        public bool MoveNext()
+        {
+            if (_paraGlyphEnumerator.MoveNext())
+                return true;
+
+            if (!_paragraphEnumerator.MoveNext())
+                return false;
+
+            _paraGlyphEnumerator = _paragraphEnumerator.Current.GetEnumerator();
+            _paraGlyphEnumerator.MoveNext();
+            return true;
+        }
+        
+        public void Dispose() => _paragraphEnumerator.Dispose();
+    }
 }

@@ -5,7 +5,7 @@ namespace HeadlessTextBox.Positioning.LineManaging;
 
 public class LineManager
 {
-    private int _height = -1;
+    public int Height { get; private set; } = 0;
     
     private readonly List<Line> _lines = new(16);
 
@@ -31,8 +31,9 @@ public class LineManager
             var leftBearing = GetFirstCharLeftBearing(extent);
             if (leftBearing < 0) xOffset = -leftBearing;
         }
-            
         LastLine.Append(extent, xOffset);
+
+        Height = CalculateHeight();
     }
 
     
@@ -90,9 +91,7 @@ public class LineManager
     
     private int CalculateHeight()
     {
-        if (_height < 0f)
-            _height = _lines.Sum(l => l.Height);
-        return _height;
+        return _lines.Sum(l => l.Height);
     }
 }
 

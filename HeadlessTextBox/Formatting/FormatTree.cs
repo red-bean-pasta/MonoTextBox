@@ -39,24 +39,28 @@ public class FormatTree: Node<FormatPiece>
     }
 
 
-    public FormatTree Extend(int index, int length)
+    public (FormatTree Tree, IFormat Format) Extend(int index, int length)
     {
-        if (index < LeftLength)
+        IFormat format;
+        
+        if (index <= LeftLength)
         {
             Debug.Assert(LeftSubNode is not null);
-            LeftSubNode = ((FormatTree)LeftSubNode).Extend(index, length);
+            (LeftSubNode, format) = ((FormatTree)LeftSubNode).Extend(index, length);
         }
-
-        if (index > BeforeRightLength)
+        else if (index > BeforeRightLength)
         {
             Debug.Assert(RightSubNode is not null);
-            RightSubNode = ((FormatTree)RightSubNode).Extend(index, length);
+            (RightSubNode, format) = ((FormatTree)RightSubNode).Extend(index, length);
+        }
+        else
+        {
+            format = Value.Format;
+            Value = Value with { Length = Value.Length + length };
         }
         
-        Value = Value with { Length = Value.Length + length };
-        
         Recalculate();
-        return this;
+        return (this, format);
     }
 
 

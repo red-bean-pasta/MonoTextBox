@@ -31,7 +31,7 @@ public class Node<T> where T : IBranch<T>
         LeftSubNode = leftSubNode;
         RightSubNode = rightSubNode;
 
-        Recalculate();
+        InitCalculate();
     }
     
     [MustDisposeResource]
@@ -353,21 +353,23 @@ public class Node<T> where T : IBranch<T>
             : right;
     }
 
-
-    protected virtual void Recalculate()
+    
+    private void InitCalculate()
     {
         SubTreeHeight = Math.Max(
-                LeftSubNode?.SubTreeHeight ?? 0,
-                RightSubNode?.SubTreeHeight ?? 0
-            ) + 1;
+            LeftSubNode?.SubTreeHeight ?? 0,
+            RightSubNode?.SubTreeHeight ?? 0
+        ) + 1;
 
         SubTreeLength = 
             Value.Length
             + (LeftSubNode?.SubTreeLength ?? 0)
             + (RightSubNode?.SubTreeLength ?? 0);
     }
-
     
+    protected virtual void Recalculate() => InitCalculate();
+
+
     // left subtree: [0, leftLength)
     // current value: [leftLength, leftLength + T.Length)
     // right subtree: [starts at leftLength + T.Length, ...)
@@ -413,6 +415,7 @@ public class Node<T> where T : IBranch<T>
     }
     
     
+    [MustDisposeResource]
     public ref struct NodeEnumerator
     {
         private int _remainingLength;
@@ -441,6 +444,7 @@ public class Node<T> where T : IBranch<T>
         }
         
         
+        [MustDisposeResource]
         public NodeEnumerator GetEnumerator() => this;
     
 
